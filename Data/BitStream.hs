@@ -10,11 +10,13 @@
 module Data.BitStream
   ( BitStream
   , tabulate
+  , tabulateFix
   , index
   ) where
 
 import Prelude hiding ((^), (*), div, mod, fromIntegral)
 import Data.Bits
+import Data.Function (fix)
 import Data.List (foldl')
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector as V
@@ -60,6 +62,25 @@ tabulate f = BitStream $ U.singleton (tabulateW 0) `V.cons` V.generate (bits - b
 
     tabulateW :: Int -> Word
     tabulateW j = foldl' (\acc k -> if f (int2word $ jj + k) then acc `setBit` k else acc) zeroBits [0 .. bits - 1]
+      where
+        jj = j `shiftL` bitsLog
+
+-- | tabulateFix f = tabulate (fix f)
+tabulateFix :: ((Word -> Bool) -> Word -> Bool) -> BitStream
+tabulateFix uf = bs
+  where
+    bs :: BitStream
+    bs = BitStream $ U.singleton (tabulateW (fix uf) 0) `V.cons` V.generate (bits - bitsLog) tabulateU
+
+    tabulateU :: Int -> U.Vector Word
+    tabulateU i = U.generate ii (\j -> tabulateW (uf f) (ii + j))
+      where
+        ii = 1 `shiftL` i
+        iii = ii `shiftL` bitsLog
+        f k = if k < int2word iii then index bs k else uf f k
+
+    tabulateW :: (Word -> Bool) -> Int -> Word
+    tabulateW f j = foldl' (\acc k -> if f (int2word $ jj + k) then acc `setBit` k else acc) zeroBits [0 .. bits - 1]
       where
         jj = j `shiftL` bitsLog
 
