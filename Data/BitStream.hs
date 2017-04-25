@@ -6,6 +6,69 @@
 --
 -- Lazy, infinite, compact stream of 'Bool' with O(1) indexing.
 -- Most useful for memoization of predicates.
+--
+-- __Example 1__
+--
+-- Consider following predicate:
+--
+-- > isOdd :: Word -> Bool
+-- > isOdd 0 = False
+-- > isOdd n = not (isOdd (n - 1))
+--
+-- Its computation is expensive, so we'd like to memoize its values into
+-- 'BitStream' using 'tabulate' and access this stream via 'index'
+-- instead of recalculation of @isOdd@:
+--
+-- > isOddBS :: BitStream
+-- > isOddBS = tabulate isOdd
+-- >
+-- > isOdd' :: Word -> Bool
+-- > isOdd' = index isOddBS
+--
+-- We can do even better by replacing part of recursive calls to @isOdd@
+-- by indexing memoized values. Write @isOddF@
+-- such that @isOdd = 'fix' isOddF@:
+--
+-- > isOddF :: (Word -> Bool) -> Word -> Bool
+-- > isOddF _ 0 = False
+-- > isOddF f n = not (f (n - 1))
+--
+-- and use 'tabulateFix':
+--
+-- > isOddBS :: BitStream
+-- > isOddBS = tabulateFix isOddF
+-- >
+-- > isOdd' :: Word -> Bool
+-- > isOdd' = index isOddBS
+--
+-- __Example 2__
+--
+-- Define a predicate, which checks whether its argument is
+-- a prime number by trial division.
+--
+-- > isPrime :: Word -> Bool
+-- > isPrime n
+-- >   | n < 2     = False
+-- >   | n < 4     = True
+-- >   | even n    = False
+-- >   | otherwise = and [ n `rem` d /= 0 | d <- [3, 5 .. ceiling (sqrt (fromIntegral n))], isPrime d]
+--
+-- Convert it to unfixed form:
+--
+-- > isPrimeF :: (Word -> Bool) -> Word -> Bool
+-- > isPrimeF f n
+-- >   | n < 2     = False
+-- >   | n < 4     = True
+-- >   | even n    = False
+-- >   | otherwise = and [ n `rem` d /= 0 | d <- [3, 5 .. ceiling (sqrt (fromIntegral n))], f d]
+--
+-- Create its memoized version for faster evaluation:
+--
+-- > isPrimeBS :: BitStream
+-- > isPrimeBS = tabulateFix isPrimeF
+-- >
+-- > isPrime' :: Word -> Bool
+-- > isPrime' = index isPrimeBS
 
 module Data.BitStream
   ( BitStream
@@ -51,7 +114,7 @@ bitsLog = bits - 1 - countLeadingZeros (int2word bits)
 
 -- | Create a bit stream from the predicate.
 -- The predicate must be well-defined for any value of argument
--- and should not return 'error'/'undefined'.
+-- and should not return 'error' / 'undefined'.
 tabulate :: (Word -> Bool) -> BitStream
 tabulate f = BitStream $ U.singleton (tabulateW 0) `V.cons` V.generate (bits - bitsLog) tabulateU
   where
@@ -65,7 +128,9 @@ tabulate f = BitStream $ U.singleton (tabulateW 0) `V.cons` V.generate (bits - b
       where
         jj = j `shiftL` bitsLog
 
--- | tabulateFix f = tabulate (fix f)
+-- | Create a bit stream from the unfixed predicate.
+-- The predicate must be well-defined for any value of argument
+-- and should not return 'error' / 'undefined'.
 tabulateFix :: ((Word -> Bool) -> Word -> Bool) -> BitStream
 tabulateFix uf = bs
   where
