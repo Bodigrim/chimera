@@ -75,9 +75,16 @@ module Data.BitStream
   , tabulate
   , tabulateFix
   , index
+
+  , mapWithKey
+  , not
+
+  , zipWithKey
+  , and
+  , or
   ) where
 
-import Prelude hiding ((^), (*), div, mod, fromIntegral)
+import Prelude hiding ((^), (*), div, mod, fromIntegral, not, and, or)
 import Data.Bits
 import Data.Function (fix)
 import Data.List (foldl')
@@ -165,3 +172,23 @@ index (BitStream vus) i =
       where
         jHi = j `shiftR` bitsLog
         jLo = j .&. (bits - 1)
+
+-- | Element-wise 'not'.
+not :: BitStream -> BitStream
+not (BitStream vus) = BitStream $ V.map (U.map (maxBound -)) vus
+
+-- | Map over all indices and respective elements in the stream.
+mapWithKey :: (Word -> Bool -> Bool) -> BitStream -> BitStream
+mapWithKey f bs = tabulate (\i -> f i (index bs i))
+
+-- | Element-wise 'and'.
+and :: BitStream -> BitStream -> BitStream
+and (BitStream vus) (BitStream wus) = BitStream $ V.zipWith (U.zipWith (.&.)) vus wus
+
+-- | Element-wise 'or'.
+or  :: BitStream -> BitStream -> BitStream
+or (BitStream vus) (BitStream wus) = BitStream $ V.zipWith (U.zipWith (.|.)) vus wus
+
+-- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
+zipWithKey :: (Word -> Bool -> Bool -> Bool) -> BitStream -> BitStream -> BitStream
+zipWithKey f bs1 bs2 = tabulate (\i -> f i (index bs1 i) (index bs2 i))
