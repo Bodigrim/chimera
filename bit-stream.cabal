@@ -14,7 +14,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Data.BitStream
                        Data.BitStream.ContinuousMapping
-  build-depends:       base >= 4.7 && < 5, vector
+  build-depends:       base >= 4.8 && < 5, vector
   default-language:    Haskell2010
   ghc-options:         -Wall -O2
 
@@ -28,5 +28,5 @@ test-suite test
   ghc-options:         -Wall -O2
   main-is:             Test.hs
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5, vector, bit-stream,
+  build-depends:       base >= 4.8 && < 5, vector, bit-stream,
                        QuickCheck, tasty, tasty-smallcheck, tasty-quickcheck, tasty-hunit
