@@ -14,9 +14,6 @@ import Data.Word
 import Data.BitStream as BS
 import Data.BitStream.ContinuousMapping
 
-instance Function Word where
-  function = functionIntegral
-
 instance Arbitrary BitStream where
   arbitrary = tabulateM (const arbitrary)
 
