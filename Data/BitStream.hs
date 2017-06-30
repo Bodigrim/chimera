@@ -70,10 +70,14 @@
 -- > isPrime' :: Word -> Bool
 -- > isPrime' = index isPrimeBS
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Data.BitStream
   ( BitStream
   , tabulate
   , tabulateFix
+  , tabulateM
+  , tabulateFixM
   , index
 
   , mapWithKey
@@ -86,7 +90,9 @@ module Data.BitStream
 
 import Prelude hiding ((^), (*), div, mod, fromIntegral, not, and, or)
 import Data.Bits
+import Data.Foldable hiding (and, or)
 import Data.Function (fix)
+import Data.Functor.Identity
 import Data.List (foldl')
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector as V
@@ -123,40 +129,68 @@ bitsLog = bits - 1 - countLeadingZeros (int2word bits)
 -- The predicate must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
 tabulate :: (Word -> Bool) -> BitStream
-tabulate f = BitStream $ U.singleton (tabulateW 0) `V.cons` V.generate (bits - bitsLog) tabulateU
+tabulate f = runIdentity $ tabulateM (return . f)
+
+-- | Create a bit stream from the monadic predicate.
+-- The predicate must be well-defined for any value of argument
+-- and should not return 'error' / 'undefined'.
+tabulateM :: forall m. Monad m => (Word -> m Bool) -> m BitStream
+tabulateM f = do
+  z  <- tabulateW 0
+  zs <- V.generateM (bits - bitsLog) tabulateU
+  return $ BitStream $ U.singleton z `V.cons` zs
   where
-    tabulateU :: Int -> U.Vector Word
-    tabulateU i = U.generate ii (\j -> tabulateW (ii + j))
+    tabulateU :: Int -> m (U.Vector Word)
+    tabulateU i = U.generateM ii (\j -> tabulateW (ii + j))
       where
         ii = 1 `shiftL` i
 
-    tabulateW :: Int -> Word
-    tabulateW j = foldl' (\acc k -> if f (int2word $ jj + k) then acc `setBit` k else acc) zeroBits [0 .. bits - 1]
+    tabulateW :: Int -> m Word
+    tabulateW j = foldlM go zeroBits [0 .. bits - 1]
       where
         jj = j `shiftL` bitsLog
+        go acc k = do
+          b <- f (int2word $ jj + k)
+          return $ if b then acc `setBit` k else acc
+{-# SPECIALIZE tabulateM :: (Word -> Identity Bool) -> Identity BitStream #-}
 
 -- | Create a bit stream from the unfixed predicate.
 -- The predicate must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
 tabulateFix :: ((Word -> Bool) -> Word -> Bool) -> BitStream
-tabulateFix uf = bs
-  where
-    bs :: BitStream
-    bs = BitStream $ U.singleton (tabulateW (fix uf) 0) `V.cons` V.generate (bits - bitsLog) tabulateU
+tabulateFix uf = runIdentity $ tabulateFixM ((return .) . uf . (runIdentity .))
 
-    tabulateU :: Int -> U.Vector Word
-    tabulateU i = U.generate ii (\j -> tabulateW (uf f) (ii + j))
+-- | Create a bit stream from the unfixed monadic predicate.
+-- The predicate must be well-defined for any value of argument
+-- and should not return 'error' / 'undefined'.
+tabulateFixM :: forall m. Monad m => ((Word -> m Bool) -> Word -> m Bool) -> m BitStream
+tabulateFixM uf = bs
+  where
+    bs :: m BitStream
+    bs = do
+      z  <- tabulateW (fix uf) 0
+      zs <- V.generateM (bits - bitsLog) tabulateU
+      return $ BitStream $ U.singleton z `V.cons` zs
+
+    tabulateU :: Int -> m (U.Vector Word)
+    tabulateU i = U.generateM ii (\j -> tabulateW (uf f) (ii + j))
       where
         ii = 1 `shiftL` i
         iii = ii `shiftL` bitsLog
-        f k = if k < int2word iii then index bs k else uf f k
+        f k = do
+          bs' <- bs
+          if k < int2word iii then return (index bs' k) else uf f k
 
-    tabulateW :: (Word -> Bool) -> Int -> Word
-    tabulateW f j = foldl' (\acc k -> if f (int2word $ jj + k) then acc `setBit` k else acc) zeroBits [0 .. bits - 1]
+    tabulateW :: (Word -> m Bool) -> Int -> m Word
+    tabulateW f j = foldlM go zeroBits [0 .. bits - 1]
       where
         jj = j `shiftL` bitsLog
+        go acc k = do
+          b <- f (int2word $ jj + k)
+          return $ if b then acc `setBit` k else acc
+{-# SPECIALIZE tabulateFixM :: ((Word -> Identity Bool) -> Word -> Identity Bool) -> Identity BitStream #-}
 
--- | Convert bit stream back to predicate.
+-- | Convert a bit stream back to predicate.
 -- Indexing itself works in O(1) time, but triggers evaluation and allocation
 -- of surrounding elements of the stream, if they were not computed before.
 index :: BitStream -> Word -> Bool
