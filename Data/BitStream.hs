@@ -213,7 +213,19 @@ not (BitStream vus) = BitStream $ V.map (U.map (maxBound -)) vus
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (Word -> Bool -> Bool) -> BitStream -> BitStream
-mapWithKey f bs = tabulate (\i -> f i (index bs i))
+mapWithKey f (BitStream bs) = BitStream $ V.imap g bs
+  where
+    g :: Int -> U.Vector Word -> U.Vector Word
+    g 0         = U.imap h
+    g logOffset = U.imap (h . (`shiftL` bitsLog) . (+ offset))
+      where
+        offset = 1 `shiftL` (logOffset - 1)
+
+    h :: Int -> Word -> Word
+    h offset w = foldl'
+      (\acc k -> if f (int2word $ offset + k) (testBit w k)  then acc `setBit` k else acc)
+      zeroBits
+      [0 .. bits - 1]
 
 -- | Element-wise 'and'.
 and :: BitStream -> BitStream -> BitStream
@@ -225,4 +237,16 @@ or (BitStream vus) (BitStream wus) = BitStream $ V.zipWith (U.zipWith (.|.)) vus
 
 -- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
 zipWithKey :: (Word -> Bool -> Bool -> Bool) -> BitStream -> BitStream -> BitStream
-zipWithKey f bs1 bs2 = tabulate (\i -> f i (index bs1 i) (index bs2 i))
+zipWithKey f (BitStream bs1) (BitStream bs2) = BitStream $ V.izipWith g bs1 bs2
+  where
+    g :: Int -> U.Vector Word -> U.Vector Word -> U.Vector Word
+    g 0         = U.izipWith h
+    g logOffset = U.izipWith (h . (`shiftL` bitsLog) . (+ offset))
+      where
+        offset = 1 `shiftL` (logOffset - 1)
+
+    h :: Int -> Word -> Word -> Word
+    h offset w1 w2 = foldl'
+      (\acc k -> if f (int2word $ offset + k) (testBit w1 k) (testBit w2 k) then acc `setBit` k else acc)
+      zeroBits
+      [0 .. bits - 1]
