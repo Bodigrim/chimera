@@ -81,9 +81,11 @@ module Data.BitStream
   , index
 
   , mapWithKey
+  , traverseWithKey
   , not
 
   , zipWithKey
+  , zipWithKeyM
   , and
   , or
   ) where
@@ -93,7 +95,6 @@ import Data.Bits
 import Data.Foldable hiding (and, or)
 import Data.Function (fix)
 import Data.Functor.Identity
-import Data.List (foldl')
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector as V
 import Unsafe.Coerce
@@ -213,19 +214,25 @@ not (BitStream vus) = BitStream $ V.map (U.map (maxBound -)) vus
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (Word -> Bool -> Bool) -> BitStream -> BitStream
-mapWithKey f (BitStream bs) = BitStream $ V.imap g bs
+mapWithKey f = runIdentity . traverseWithKey ((return .) . f)
+
+-- | Traverse over all indices and respective elements in the stream.
+traverseWithKey :: forall m. Monad m => (Word -> Bool -> m Bool) -> BitStream -> m BitStream
+traverseWithKey f (BitStream bs) = BitStream <$> V.imapM g bs
   where
-    g :: Int -> U.Vector Word -> U.Vector Word
-    g 0         = U.imap h
-    g logOffset = U.imap (h . (`shiftL` bitsLog) . (+ offset))
+    g :: Int -> U.Vector Word -> m (U.Vector Word)
+    g 0         = U.imapM h
+    g logOffset = U.imapM (h . (`shiftL` bitsLog) . (+ offset))
       where
         offset = 1 `shiftL` (logOffset - 1)
 
-    h :: Int -> Word -> Word
-    h offset w = foldl'
-      (\acc k -> if f (int2word $ offset + k) (testBit w k)  then acc `setBit` k else acc)
-      zeroBits
-      [0 .. bits - 1]
+    h :: Int -> Word -> m Word
+    h offset w = foldlM go zeroBits [0 .. bits - 1]
+      where
+        go acc k = do
+          b <- f (int2word $ offset + k) (testBit w k)
+          return $ if b then acc `setBit` k else acc
+{-# SPECIALIZE traverseWithKey :: (Word -> Bool -> Identity Bool) -> BitStream -> Identity BitStream #-}
 
 -- | Element-wise 'and'.
 and :: BitStream -> BitStream -> BitStream
@@ -237,16 +244,22 @@ or (BitStream vus) (BitStream wus) = BitStream $ V.zipWith (U.zipWith (.|.)) vus
 
 -- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
 zipWithKey :: (Word -> Bool -> Bool -> Bool) -> BitStream -> BitStream -> BitStream
-zipWithKey f (BitStream bs1) (BitStream bs2) = BitStream $ V.izipWith g bs1 bs2
+zipWithKey f = (runIdentity .) . zipWithKeyM (((return .) .) . f)
+
+-- | Zip two streams with the monadic function, which is provided with an index and respective elements of both streams.
+zipWithKeyM :: forall m. Monad m => (Word -> Bool -> Bool -> m Bool) -> BitStream -> BitStream -> m BitStream
+zipWithKeyM f (BitStream bs1) (BitStream bs2) = BitStream <$> V.izipWithM g bs1 bs2
   where
-    g :: Int -> U.Vector Word -> U.Vector Word -> U.Vector Word
-    g 0         = U.izipWith h
-    g logOffset = U.izipWith (h . (`shiftL` bitsLog) . (+ offset))
+    g :: Int -> U.Vector Word -> U.Vector Word -> m (U.Vector Word)
+    g 0         = U.izipWithM h
+    g logOffset = U.izipWithM (h . (`shiftL` bitsLog) . (+ offset))
       where
         offset = 1 `shiftL` (logOffset - 1)
 
-    h :: Int -> Word -> Word -> Word
-    h offset w1 w2 = foldl'
-      (\acc k -> if f (int2word $ offset + k) (testBit w1 k) (testBit w2 k) then acc `setBit` k else acc)
-      zeroBits
-      [0 .. bits - 1]
+    h :: Int -> Word -> Word -> m Word
+    h offset w1 w2 = foldlM go zeroBits [0 .. bits - 1]
+      where
+        go acc k = do
+          b <- f (int2word $ offset + k) (testBit w1 k) (testBit w2 k)
+          return $ if b then acc `setBit` k else acc
+{-# SPECIALIZE zipWithKeyM :: (Word -> Bool -> Bool -> Identity Bool) -> BitStream -> BitStream -> Identity BitStream #-}
