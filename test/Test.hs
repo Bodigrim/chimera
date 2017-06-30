@@ -11,11 +11,14 @@ import Data.Function (fix)
 import Data.List
 import Data.Word
 
-import Data.BitStream
+import Data.BitStream as BS
 import Data.BitStream.ContinuousMapping
 
 instance Function Word where
   function = functionIntegral
+
+instance Arbitrary BitStream where
+  arbitrary = tabulateM (const arbitrary)
 
 main :: IO ()
 main = defaultMain tests
@@ -25,12 +28,22 @@ tests = testGroup "All"
   [ QC.testProperty "index . tabulate = id" $
     \(Fun _ f) ix ->
       let jx = ix `mod` 65536 in
-        f jx == index (tabulate f) jx
+        f jx === index (tabulate f) jx
   , QC.testProperty "index . tabulateFix = fix" $
     \(Fun _ g) ix ->
       let jx = ix `mod` 65536 in
         let f = mkUnfix g in
-          fix f jx == index (tabulateFix f) jx
+          fix f jx === index (tabulateFix f) jx
+
+  , QC.testProperty "mapWithKey" $
+    \(Blind bs) (Fun _ g) ix ->
+      let jx = ix `mod` 65536 in
+        g (jx, index bs jx) === index (BS.mapWithKey (curry g) bs) jx
+
+  , QC.testProperty "zipWithKey" $
+    \(Blind bs1) (Blind bs2) (Fun _ g) ix ->
+      let jx = ix `mod` 65536 in
+        g (jx, index bs1 jx, index bs2 jx) === index (BS.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2) jx
 
   , testGroup "wordToInt . intToWord"
     [ QC.testProperty "random" $ \i -> w2i_i2w i === i
