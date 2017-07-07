@@ -13,6 +13,7 @@ import Data.Word
 
 import Data.BitStream as BS
 import Data.BitStream.ContinuousMapping
+import Data.BitStream.WheelMapping
 
 instance Arbitrary BitStream where
   arbitrary = tabulateM (const arbitrary)
@@ -58,6 +59,13 @@ tests = testGroup "All"
     ]
   , testGroup "from . to Morton"
     [ QC.testProperty "random" $ \z -> fromToMorton z === z
+    ]
+
+  , testGroup "toWheel . fromWheel"
+    [ QC.testProperty   "2" $ \(Shrink2 x) -> x < maxBound `div` 2 ==> toWheel2   (fromWheel2   x) === x
+    , QC.testProperty   "6" $ \(Shrink2 x) -> x < maxBound `div` 3 ==> toWheel6   (fromWheel6   x) === x
+    , QC.testProperty  "30" $ \(Shrink2 x) -> x < maxBound `div` 4 ==> toWheel30  (fromWheel30  x) === x
+    , QC.testProperty "210" $ \(Shrink2 x) -> x < maxBound `div` 5 ==> toWheel210 (fromWheel210 x) === x
     ]
   ]
 
