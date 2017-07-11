@@ -15,7 +15,8 @@ library
   exposed-modules:     Data.BitStream
                        Data.BitStream.ContinuousMapping
                        Data.BitStream.WheelMapping
-  build-depends:       base >= 4.8 && < 5, vector
+  build-depends:         base >= 4.8 && < 5
+                       , vector
   default-language:    Haskell2010
   ghc-options:         -Wall -O2
 
@@ -29,13 +30,31 @@ test-suite test
   ghc-options:         -Wall -O2
   main-is:             Test.hs
   default-language:    Haskell2010
-  build-depends:       base >= 4.8 && < 5, vector, bit-stream,
-                       QuickCheck >= 2.10, tasty, tasty-smallcheck, tasty-quickcheck, tasty-hunit
+  build-depends:         base >= 4.8 && < 5
+                       , bit-stream
+                       , QuickCheck >= 2.10
+                       , tasty
+                       , tasty-hunit
+                       , tasty-quickcheck
+                       , tasty-smallcheck
+                       , vector
 
 executable find-foo
+  buildable:           False
   main-is:             find-foo.hs
   hs-source-dirs:      app
-  build-depends:       base >=4 && <5
-                     , bit-stream, vector
+  build-depends:       base >= 4.8 && < 5
+                     , bit-stream
+                     , vector
   default-language:    Haskell2010
   ghc-options:         -Wall -O2
+
+benchmark bench
+  type:                exitcode-stdio-1.0
+  main-is:             Bench.hs
+  hs-source-dirs:      bench
+  build-depends:         base >= 4.8 && < 5
+                       , bit-stream
+                       , criterion
+  default-language:    Haskell2010
+  ghc-options:         -O2
