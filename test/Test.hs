@@ -10,7 +10,6 @@ import Test.Tasty.QuickCheck as QC
 import Data.Bits
 import Data.Function (fix)
 import Data.List
-import Data.Word
 
 import Data.BitStream as BS
 import Data.BitStream.ContinuousMapping
@@ -56,17 +55,17 @@ tests = testGroup "All"
     ]
 
   , testGroup "to . from Z-curve 2D"
-    [ QC.testProperty "random" $ \xy -> toFromZ xy === xy
+    [ QC.testProperty "random" $ \z -> (\(x, y) -> toZCurve x y) (fromZCurve z) === z
     ]
   , testGroup "from . to Z-curve 2D"
-    [ QC.testProperty "random" $ \z -> fromToZ z === z
+    [ QC.testProperty "random" $ \x y -> fromZCurve (toZCurve x y) === (x `rem` (1 `shiftL` 32), y `rem` (1 `shiftL` 32))
     ]
 
   , testGroup "to . from Z-curve 3D"
-    [ QC.testProperty "random" $ \xyz -> toFromZ3 xyz === xyz `rem` (1 `shiftL` 48)
+    [ QC.testProperty "random" $ \t -> (\(x, y, z) -> toZCurve3 x y z) (fromZCurve3 t) === t `rem` (1 `shiftL` 63)
     ]
   , testGroup "from . to Z-curve 3D"
-    [ QC.testProperty "random" $ \z -> fromToZ3 z === z
+    [ QC.testProperty "random" $ \x y z -> fromZCurve3 (toZCurve3 x y z) === (x `rem` (1 `shiftL` 21), y `rem` (1 `shiftL` 21), z `rem` (1 `shiftL` 21))
     ]
 
   , testGroup "toWheel . fromWheel"
@@ -82,18 +81,6 @@ w2i_i2w = wordToInt . intToWord
 
 i2w_w2i :: Word -> Word
 i2w_w2i  = intToWord . wordToInt
-
-toFromZ :: Word64 -> Word64
-toFromZ = (\(x, y) -> toZCurve x y) . fromZCurve
-
-toFromZ3 :: Word64 -> Word64
-toFromZ3 = (\(x, y, z) -> toZCurve3 x y z) . fromZCurve3
-
-fromToZ :: (Word32, Word32) -> (Word32, Word32)
-fromToZ = fromZCurve . (\(x, y) -> toZCurve x y)
-
-fromToZ3 :: (Word16, Word16, Word16) -> (Word16, Word16, Word16)
-fromToZ3 = fromZCurve3 . (\(x, y, z) -> toZCurve3 x y z)
 
 mkUnfix :: (Word -> [Word]) -> (Word -> Bool) -> Word -> Bool
 mkUnfix splt f x
