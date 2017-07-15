@@ -139,7 +139,7 @@ fromWheel30 i = ((i `shiftL` 2 - i `shiftR` 2) .|. 1)
               + ((i `shiftL` 1 - i `shiftR` 1) .&. 2)
 {-# INLINE fromWheel30 #-}
 
--- | Left inverse for 'fromWheel210'.
+-- | Left inverse for 'fromWheel210'. Monotonically non-decreasing function.
 --
 -- prop> toWheel210 . fromWheel210 == id
 toWheel210 :: Word -> Word

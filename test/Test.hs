@@ -7,6 +7,7 @@ import Test.Tasty
 import Test.Tasty.HUnit as H
 import Test.Tasty.QuickCheck as QC
 
+import Data.Bits
 import Data.Function (fix)
 import Data.List
 import Data.Word
@@ -54,11 +55,18 @@ tests = testGroup "All"
     , H.testCase "minBound" $ assertEqual "should be equal" minBound (i2w_w2i minBound)
     ]
 
-  , testGroup "to . from Morton"
-    [ QC.testProperty "random" $ \xy -> toFromMorton xy === xy
+  , testGroup "to . from Z-curve 2D"
+    [ QC.testProperty "random" $ \xy -> toFromZ xy === xy
     ]
-  , testGroup "from . to Morton"
-    [ QC.testProperty "random" $ \z -> fromToMorton z === z
+  , testGroup "from . to Z-curve 2D"
+    [ QC.testProperty "random" $ \z -> fromToZ z === z
+    ]
+
+  , testGroup "to . from Z-curve 3D"
+    [ QC.testProperty "random" $ \xyz -> toFromZ3 xyz === xyz `rem` (1 `shiftL` 48)
+    ]
+  , testGroup "from . to Z-curve 3D"
+    [ QC.testProperty "random" $ \z -> fromToZ3 z === z
     ]
 
   , testGroup "toWheel . fromWheel"
@@ -75,11 +83,17 @@ w2i_i2w = wordToInt . intToWord
 i2w_w2i :: Word -> Word
 i2w_w2i  = intToWord . wordToInt
 
-toFromMorton :: Word64 -> Word64
-toFromMorton = uncurry toMortonCurve . fromMortonCurve
+toFromZ :: Word64 -> Word64
+toFromZ = (\(x, y) -> toZCurve x y) . fromZCurve
 
-fromToMorton :: (Word32, Word32) -> (Word32, Word32)
-fromToMorton = fromMortonCurve . uncurry toMortonCurve
+toFromZ3 :: Word64 -> Word64
+toFromZ3 = (\(x, y, z) -> toZCurve3 x y z) . fromZCurve3
+
+fromToZ :: (Word32, Word32) -> (Word32, Word32)
+fromToZ = fromZCurve . (\(x, y) -> toZCurve x y)
+
+fromToZ3 :: (Word16, Word16, Word16) -> (Word16, Word16, Word16)
+fromToZ3 = fromZCurve3 . (\(x, y, z) -> toZCurve3 x y z)
 
 mkUnfix :: (Word -> [Word]) -> (Word -> Bool) -> Word -> Bool
 mkUnfix splt f x
