@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-unused-imports #-}
 
 module Main where
 
@@ -10,6 +10,7 @@ import Test.Tasty.QuickCheck as QC
 import Data.Bits
 import Data.Function (fix)
 import Data.List
+import Data.Word
 
 import Data.BitStream as BS
 import Data.BitStream.ContinuousMapping

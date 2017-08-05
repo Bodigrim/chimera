@@ -46,6 +46,8 @@
 
 {-# LANGUAGE BinaryLiterals #-}
 
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
 module Data.BitStream.ContinuousMapping
   ( intToWord
   , wordToInt
@@ -56,6 +58,7 @@ module Data.BitStream.ContinuousMapping
   ) where
 
 import Data.Bits
+import Data.Word
 import Unsafe.Coerce
 
 word2int :: Word -> Int

@@ -1,8 +1,11 @@
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
 module Main where
 
 import Criterion.Main
 
 import Data.BitStream.WheelMapping
+import Data.Word
 
 doBench :: String -> (Word -> Word) -> Benchmark
 doBench name fn = bench name $ nf (sum . (map fn))   [0..46409]

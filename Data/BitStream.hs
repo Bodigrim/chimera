@@ -72,6 +72,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
 module Data.BitStream
   ( BitStream
   , tabulate
@@ -97,6 +99,7 @@ import Data.Function (fix)
 import Data.Functor.Identity
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector as V
+import Data.Word
 import Unsafe.Coerce
 
 -- | Compact representation of infinite stream of 'Bool'.
