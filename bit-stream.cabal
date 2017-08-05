@@ -6,10 +6,10 @@ license-file:        LICENSE
 author:              Bodigrim
 maintainer:          andrew.lelechenko@gmail.com
 copyright:           2017 Bodigrim
-category:            Web
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
+synopsis:            Lazy, infinite, compact stream of Bool with O(1) indexing.
 
 library
   exposed-modules:     Data.BitStream
