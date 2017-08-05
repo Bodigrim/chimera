@@ -126,7 +126,7 @@ int2word :: Int -> Word
 int2word = unsafeCoerce
 
 bits :: Int
-bits = finiteBitSize (0 :: Word)
+bits = fbs (0 :: Word)
 
 bitsLog :: Int
 bitsLog = bits - 1 - word2int (clz (int2word bits))
@@ -152,7 +152,7 @@ tabulateM f = do
         ii = 1 `shiftL` i
 
     tabulateW :: Int -> m Word
-    tabulateW j = foldlM go zeroBits [0 .. bits - 1]
+    tabulateW j = foldlM go 0 [0 .. bits - 1]
       where
         jj = j `shiftL` bitsLog
         go acc k = do
@@ -188,7 +188,7 @@ tabulateFixM uf = bs
           if k < int2word iii then return (index bs' k) else uf f k
 
     tabulateW :: (Word -> m Bool) -> Int -> m Word
-    tabulateW f j = foldlM go zeroBits [0 .. bits - 1]
+    tabulateW f j = foldlM go 0 [0 .. bits - 1]
       where
         jj = j `shiftL` bitsLog
         go acc k = do
@@ -205,7 +205,7 @@ index (BitStream vus) i =
   else indexU (vus `V.unsafeIndex` (sgm + 1)) (word2int $ i - int2word bits `shiftL` sgm)
   where
     sgm :: Int
-    sgm = finiteBitSize i - 1 - bitsLog - word2int (clz i)
+    sgm = fbs i - 1 - bitsLog - word2int (clz i)
 
     indexU :: U.Vector Word -> Int -> Bool
     indexU vec j = testBit (vec `U.unsafeIndex` jHi) jLo
@@ -234,7 +234,7 @@ traverseWithKey f (BitStream bs) = do
         offset = 1 `shiftL` (logOffset - 1)
 
     h :: Int -> Word -> m Word
-    h offset w = foldlM go zeroBits [0 .. bits - 1]
+    h offset w = foldlM go 0 [0 .. bits - 1]
       where
         go acc k = do
           b <- f (int2word $ offset + k) (testBit w k)
@@ -266,7 +266,7 @@ zipWithKeyM f (BitStream bs1) (BitStream bs2) = do
         offset = 1 `shiftL` (logOffset - 1)
 
     h :: Int -> Word -> Word -> m Word
-    h offset w1 w2 = foldlM go zeroBits [0 .. bits - 1]
+    h offset w1 w2 = foldlM go 0 [0 .. bits - 1]
       where
         go acc k = do
           b <- f (int2word $ offset + k) (testBit w1 k) (testBit w2 k)

@@ -12,6 +12,7 @@
 
 module Data.BitStream.Compat
   ( clz
+  , fbs
   ) where
 
 import Data.Bits
@@ -35,8 +36,22 @@ clz w = int2word $ case setBits of
   []      -> sz
   (s : _) -> sz - s - 1
   where
-    sz = finiteBitSize w
+    sz = fbs w
     setBits = map fst $ filter snd $ map (\i -> (i, testBit w i)) [sz - 1, sz - 2 .. 0]
 {-# INLINE clz #-}
+
+#endif
+
+#if __GLASGOW_HASKELL__ > 707
+
+fbs :: Word -> Int
+fbs = finiteBitSize
+{-# INLINE fbs #-}
+
+#else
+
+fbs :: Word -> Int
+fbs = bitSize
+{-# INLINE fbs #-}
 
 #endif
