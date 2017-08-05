@@ -102,6 +102,8 @@ import qualified Data.Vector as V
 import Data.Word
 import Unsafe.Coerce
 
+import Data.BitStream.Compat
+
 -- | Compact representation of infinite stream of 'Bool'.
 --
 -- It spends one bit (1/8 byte) for one 'Bool' in store.
@@ -127,7 +129,7 @@ bits :: Int
 bits = finiteBitSize (0 :: Word)
 
 bitsLog :: Int
-bitsLog = bits - 1 - countLeadingZeros (int2word bits)
+bitsLog = bits - 1 - word2int (clz (int2word bits))
 
 -- | Create a bit stream from the predicate.
 -- The predicate must be well-defined for any value of argument
@@ -203,7 +205,7 @@ index (BitStream vus) i =
   else indexU (vus `V.unsafeIndex` (sgm + 1)) (word2int $ i - int2word bits `shiftL` sgm)
   where
     sgm :: Int
-    sgm = finiteBitSize i - 1 - bitsLog - countLeadingZeros i
+    sgm = finiteBitSize i - 1 - bitsLog - word2int (clz i)
 
     indexU :: U.Vector Word -> Int -> Bool
     indexU vec j = testBit (vec `U.unsafeIndex` jHi) jLo
@@ -221,7 +223,9 @@ mapWithKey f = runIdentity . traverseWithKey ((return .) . f)
 
 -- | Traverse over all indices and respective elements in the stream.
 traverseWithKey :: forall m. Monad m => (Word -> Bool -> m Bool) -> BitStream -> m BitStream
-traverseWithKey f (BitStream bs) = BitStream <$> V.imapM g bs
+traverseWithKey f (BitStream bs) = do
+  bs' <- V.imapM g bs
+  return $ BitStream bs'
   where
     g :: Int -> U.Vector Word -> m (U.Vector Word)
     g 0         = U.imapM h
@@ -251,7 +255,9 @@ zipWithKey f = (runIdentity .) . zipWithKeyM (((return .) .) . f)
 
 -- | Zip two streams with the monadic function, which is provided with an index and respective elements of both streams.
 zipWithKeyM :: forall m. Monad m => (Word -> Bool -> Bool -> m Bool) -> BitStream -> BitStream -> m BitStream
-zipWithKeyM f (BitStream bs1) (BitStream bs2) = BitStream <$> V.izipWithM g bs1 bs2
+zipWithKeyM f (BitStream bs1) (BitStream bs2) = do
+  bs' <- V.izipWithM g bs1 bs2
+  return $ BitStream bs'
   where
     g :: Int -> U.Vector Word -> U.Vector Word -> m (U.Vector Word)
     g 0         = U.izipWithM h
