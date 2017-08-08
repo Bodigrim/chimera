@@ -23,7 +23,6 @@ main = defaultMain
     , doBench  "30" $ toWheel30
     , doBench "210" $ toWheel210
     ]
-  , doBench "toIdx" $ toIdx
   , bgroup "fromWheel"
     [ doBench   "2" $ fromWheel2
     , doBench   "6" $ fromWheel6
