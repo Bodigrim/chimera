@@ -81,6 +81,8 @@ module Data.BitStream
   , tabulateM
   , tabulateFixM
   , index
+  , trueIndices
+  , falseIndices
 
   , mapWithKey
   , traverseWithKey
@@ -212,6 +214,33 @@ index (BitStream vus) i =
       where
         jHi = j `shiftR` bitsLog
         jLo = j .&. (bits - 1)
+
+-- | List indices of elements equal to 'True'.
+trueIndices :: BitStream -> [Word]
+trueIndices bs = someIndices True bs
+
+-- | List indices of elements equal to 'False'.
+falseIndices :: BitStream -> [Word]
+falseIndices bs = someIndices False bs
+
+someIndices :: Bool -> BitStream -> [Word]
+someIndices bool (BitStream b) = V.ifoldr goU [] b
+  where
+    goU :: Int -> U.Vector Word -> [Word] -> [Word]
+    goU i vec rest = U.ifoldr (\j -> goW (ii + j)) rest vec
+      where
+        ii = case i of
+          0 -> 0
+          _ -> 1 `shiftL` (i - 1)
+
+    goW :: Int -> Word -> [Word] -> [Word]
+    goW j w rest
+      = map (\k -> int2word $ jj + k)
+      (filter (\bt -> testBit w bt == bool) [0 .. bits - 1])
+      ++ rest
+      where
+        jj = j `shiftL` bitsLog
+{-# INLINE someIndices #-}
 
 -- | Element-wise 'not'.
 not :: BitStream -> BitStream

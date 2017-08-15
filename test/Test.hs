@@ -34,6 +34,13 @@ tests = testGroup "All"
         let f = mkUnfix g in
           fix f jx === index (tabulateFix f) jx
 
+  , QC.testProperty "trueIndices" $
+    \(Fun _ f) ->
+      take 100 (trueIndices $ tabulate f) === take 100 (filter f [0..])
+  , QC.testProperty "falseIndices" $
+    \(Fun _ f) ->
+      take 100 (falseIndices $ tabulate f) === take 100 (filter (Prelude.not . f) [0..])
+
   , QC.testProperty "mapWithKey" $
     \(Blind bs) (Fun _ g) ix ->
       let jx = ix `mod` 65536 in
