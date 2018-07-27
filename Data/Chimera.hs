@@ -59,15 +59,13 @@ int2word = unsafeCoerce
 bits :: Int
 bits = fbs (0 :: Word)
 
--- | Create a bit stream from the predicate.
--- The predicate must be well-defined for any value of argument
+-- | Create a stream from the function.
+-- The function must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
 tabulate :: (Word -> a) -> Chimera a
 tabulate f = runIdentity $ tabulateM (return . f)
 
--- | Create a bit stream from the monadic predicate.
--- The predicate must be well-defined for any value of argument
--- and should not return 'error' / 'undefined'.
+-- | Create a stream from the monadic function.
 tabulateM :: forall m a. Monad m => (Word -> m a) -> m (Chimera a)
 tabulateM f = do
   z  <- f 0
@@ -80,15 +78,11 @@ tabulateM f = do
         ii = 1 `shiftL` i
 {-# SPECIALIZE tabulateM :: (Word -> Identity a) -> Identity (Chimera a) #-}
 
--- | Create a bit stream from the unfixed predicate.
--- The predicate must be well-defined for any value of argument
--- and should not return 'error' / 'undefined'.
+-- | Create a stream from the unfixed function.
 tabulateFix :: ((Word -> a) -> Word -> a) -> Chimera a
 tabulateFix uf = runIdentity $ tabulateFixM ((return .) . uf . (runIdentity .))
 
--- | Create a bit stream from the unfixed monadic predicate.
--- The predicate must be well-defined for any value of argument
--- and should not return 'error' / 'undefined'.
+-- | Create a stream from the unfixed monadic function.
 tabulateFixM :: forall m a. Monad m => ((Word -> m a) -> Word -> m a) -> m (Chimera a)
 tabulateFixM uf = bs
   where
@@ -109,9 +103,7 @@ tabulateFixM uf = bs
 
 {-# SPECIALIZE tabulateFixM :: ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera a) #-}
 
--- | Convert a bit stream back to predicate.
--- Indexing itself works in O(1) time, but triggers evaluation and allocation
--- of surrounding elements of the stream, if they were not computed before.
+-- | Convert a stream back to a function.
 index :: Chimera a -> Word -> a
 index (Chimera vus) 0 = V.unsafeHead (V.unsafeHead vus)
 index (Chimera vus) i = V.unsafeIndex (vus `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `shiftL` sgm)
