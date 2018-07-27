@@ -99,12 +99,14 @@ tabulateFixM uf = bs
       return $ Chimera $ V.singleton z `V.cons` zs
 
     tabulateU :: Int -> m (V.Vector a)
-    tabulateU i = V.generateM ii (\j -> uf f (int2word (ii + j)))
+    tabulateU i = vs
       where
+        vs = V.generateM ii (\j -> uf f (int2word (ii + j)))
         ii = 1 `shiftL` i
-        f k = do
-          bs' <- bs
-          if k < int2word ii then return (index bs' k) else uf f k
+        f k = if k < int2word ii
+          then flip index k <$> bs
+          else flip V.unsafeIndex (word2int k - ii) <$> vs
+
 {-# SPECIALIZE tabulateFixM :: ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera a) #-}
 
 -- | Convert a bit stream back to predicate.
