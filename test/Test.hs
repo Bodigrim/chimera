@@ -12,12 +12,14 @@ import Test.Tasty.QuickCheck as QC
 import Data.Bits
 import Data.Function (fix)
 import Data.List
+import qualified Data.Vector.Unboxed as U
 import Data.Word
 
 import qualified Data.BitStream as BS
 import Data.BitStream.ContinuousMapping
 import Data.BitStream.WheelMapping
 import qualified Data.Chimera as Ch
+import qualified Data.Chimera.Unboxed as ChU
 
 instance Arbitrary BS.BitStream where
   arbitrary = BS.tabulateM (const arbitrary)
@@ -25,10 +27,14 @@ instance Arbitrary BS.BitStream where
 instance Arbitrary a => Arbitrary (Ch.Chimera a) where
   arbitrary = Ch.tabulateM (const arbitrary)
 
+instance (Arbitrary a, U.Unbox a) => Arbitrary (ChU.Chimera a) where
+  arbitrary = ChU.tabulateM (const arbitrary)
+
 main :: IO ()
 main = defaultMain $ testGroup "All"
   [ bitStreamTests
   , chimeraTests
+  , chimeraUnboxedTests
   ]
 
 bitStreamTests :: TestTree
@@ -114,6 +120,29 @@ chimeraTests = testGroup "Chimera"
     \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Bool, Bool) -> Bool)) ix ->
       let jx = ix `mod` 65536 in
         g (jx, Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2) jx
+  ]
+
+chimeraUnboxedTests :: TestTree
+chimeraUnboxedTests = testGroup "Chimera Unboxed"
+  [ QC.testProperty "index . tabulate = id" $
+    \(Fun _ (f :: Word -> Bool)) ix ->
+      let jx = ix `mod` 65536 in
+        f jx === ChU.index (ChU.tabulate f) jx
+  , QC.testProperty "index . tabulateFix = fix" $
+    \(Fun _ g) ix ->
+      let jx = ix `mod` 65536 in
+        let f = mkUnfix g in
+          fix f jx === ChU.index (ChU.tabulateFix f) jx
+
+  , QC.testProperty "mapWithKey" $
+    \(Blind bs) (Fun _ (g :: (Word, Bool) -> Bool)) ix ->
+      let jx = ix `mod` 65536 in
+        g (jx, ChU.index bs jx) === ChU.index (ChU.mapWithKey (curry g) bs) jx
+
+  , QC.testProperty "zipWithKey" $
+    \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Bool, Bool) -> Bool)) ix ->
+      let jx = ix `mod` 65536 in
+        g (jx, ChU.index bs1 jx, ChU.index bs2 jx) === ChU.index (ChU.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2) jx
   ]
 
 -------------------------------------------------------------------------------
