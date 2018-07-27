@@ -17,6 +17,7 @@ module Data.Chimera.Unboxed
   , tabulateM
   , tabulateFixM
   , index
+  , toList
 
   , mapWithKey
   , traverseWithKey
@@ -27,7 +28,7 @@ module Data.Chimera.Unboxed
 
 import Prelude hiding ((^), (*), div, mod, fromIntegral, not, and, or)
 import Data.Bits
-import Data.Foldable hiding (and, or)
+import Data.Foldable hiding (and, or, toList)
 import Data.Function (fix)
 import Data.Functor.Identity
 import qualified Data.Vector as V
@@ -103,6 +104,10 @@ index (Chimera vus) i = U.unsafeIndex (vus `V.unsafeIndex` (sgm + 1)) (word2int 
   where
     sgm :: Int
     sgm = fbs i - 1 - word2int (clz i)
+
+-- | Convert a stream to a list.
+toList :: U.Unbox a => Chimera a -> [a]
+toList (Chimera vus) = foldMap U.toList vus
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: U.Unbox a => (Word -> a -> a) -> Chimera a -> Chimera a
