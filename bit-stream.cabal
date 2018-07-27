@@ -15,6 +15,7 @@ library
   exposed-modules:     Data.BitStream
                        Data.BitStream.ContinuousMapping
                        Data.BitStream.WheelMapping
+                       Data.Chimera
   other-modules:       Data.BitStream.Compat
   build-depends:         base >= 4.5 && < 5
                        , ghc-prim

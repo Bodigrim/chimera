@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans -fno-warn-unused-imports #-}
 
 module Main where
@@ -12,44 +14,51 @@ import Data.Function (fix)
 import Data.List
 import Data.Word
 
-import Data.BitStream as BS
+import qualified Data.BitStream as BS
 import Data.BitStream.ContinuousMapping
 import Data.BitStream.WheelMapping
+import qualified Data.Chimera as Ch
 
-instance Arbitrary BitStream where
-  arbitrary = tabulateM (const arbitrary)
+instance Arbitrary BS.BitStream where
+  arbitrary = BS.tabulateM (const arbitrary)
+
+instance Arbitrary a => Arbitrary (Ch.Chimera a) where
+  arbitrary = Ch.tabulateM (const arbitrary)
 
 main :: IO ()
-main = defaultMain tests
+main = defaultMain $ testGroup "All"
+  [ bitStreamTests
+  , chimeraTests
+  ]
 
-tests :: TestTree
-tests = testGroup "All"
+bitStreamTests :: TestTree
+bitStreamTests = testGroup "BitStream"
   [ QC.testProperty "index . tabulate = id" $
     \(Fun _ f) ix ->
       let jx = ix `mod` 65536 in
-        f jx === index (tabulate f) jx
+        f jx === BS.index (BS.tabulate f) jx
   , QC.testProperty "index . tabulateFix = fix" $
     \(Fun _ g) ix ->
       let jx = ix `mod` 65536 in
         let f = mkUnfix g in
-          fix f jx === index (tabulateFix f) jx
+          fix f jx === BS.index (BS.tabulateFix f) jx
 
   , QC.testProperty "trueIndices" $
     \(Fun _ f) ->
-      take 100 (trueIndices $ tabulate f) === take 100 (filter f [0..])
+      take 100 (BS.trueIndices $ BS.tabulate f) === take 100 (filter f [0..])
   , QC.testProperty "falseIndices" $
     \(Fun _ f) ->
-      take 100 (falseIndices $ tabulate f) === take 100 (filter (Prelude.not . f) [0..])
+      take 100 (BS.falseIndices $ BS.tabulate f) === take 100 (filter (Prelude.not . f) [0..])
 
   , QC.testProperty "mapWithKey" $
     \(Blind bs) (Fun _ g) ix ->
       let jx = ix `mod` 65536 in
-        g (jx, index bs jx) === index (BS.mapWithKey (curry g) bs) jx
+        g (jx, BS.index bs jx) === BS.index (BS.mapWithKey (curry g) bs) jx
 
   , QC.testProperty "zipWithKey" $
     \(Blind bs1) (Blind bs2) (Fun _ g) ix ->
       let jx = ix `mod` 65536 in
-        g (jx, index bs1 jx, index bs2 jx) === index (BS.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2) jx
+        g (jx, BS.index bs1 jx, BS.index bs2 jx) === BS.index (BS.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2) jx
 
   , testGroup "wordToInt . intToWord"
     [ QC.testProperty "random" $ \i -> w2i_i2w i === i
@@ -83,6 +92,32 @@ tests = testGroup "All"
     , QC.testProperty "210" $ \(Shrink2 x) -> x < maxBound `div` 5 ==> toWheel210 (fromWheel210 x) === x
     ]
   ]
+
+chimeraTests :: TestTree
+chimeraTests = testGroup "Chimera"
+  [ QC.testProperty "index . tabulate = id" $
+    \(Fun _ (f :: Word -> Bool)) ix ->
+      let jx = ix `mod` 65536 in
+        f jx === Ch.index (Ch.tabulate f) jx
+  , QC.testProperty "index . tabulateFix = fix" $
+    \(Fun _ g) ix ->
+      let jx = ix `mod` 65536 in
+        let f = mkUnfix g in
+          fix f jx === Ch.index (Ch.tabulateFix f) jx
+
+  , QC.testProperty "mapWithKey" $
+    \(Blind bs) (Fun _ (g :: (Word, Bool) -> Bool)) ix ->
+      let jx = ix `mod` 65536 in
+        g (jx, Ch.index bs jx) === Ch.index (Ch.mapWithKey (curry g) bs) jx
+
+  , QC.testProperty "zipWithKey" $
+    \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Bool, Bool) -> Bool)) ix ->
+      let jx = ix `mod` 65536 in
+        g (jx, Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2) jx
+  ]
+
+-------------------------------------------------------------------------------
+-- Utils
 
 w2i_i2w :: Int -> Int
 w2i_i2w = wordToInt . intToWord
