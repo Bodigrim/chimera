@@ -2,7 +2,7 @@
 
 module Main where
 
-import Criterion.Main
+import Gauge.Main
 
 import Data.Chimera.WheelMapping
 import Data.Word
