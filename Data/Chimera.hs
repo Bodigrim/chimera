@@ -6,6 +6,7 @@
 --
 -- Lazy, infinite stream with O(1) indexing.
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveFoldable      #-}
 {-# LANGUAGE DeriveFunctor       #-}
 {-# LANGUAGE DeriveTraversable   #-}
@@ -29,6 +30,7 @@ module Data.Chimera
   ) where
 
 import Prelude hiding ((^), (*), div, mod, fromIntegral, not, and, or)
+import Control.Applicative
 import Data.Bits
 import Data.Foldable hiding (and, or)
 import Data.Function (fix)
@@ -49,6 +51,14 @@ import Data.BitStream.Compat
 -- sets and unboxed vectors are completely strict.
 newtype Chimera a = Chimera { _unChimera :: V.Vector (V.Vector a) }
   deriving (Functor, Foldable, Traversable)
+
+-- | Similar to 'ZipList'.
+instance Applicative Chimera where
+  pure   = tabulate   . const
+  (<*>)  = zipWithKey (const ($))
+#if __GLASGOW_HASKELL__ > 801
+  liftA2 = zipWithKey . const
+#endif
 
 word2int :: Word -> Int
 word2int = unsafeCoerce
