@@ -1,67 +1,75 @@
-name:                bit-stream
-version:             0.1.0.2
-homepage:            https://github.com/Bodigrim/bit-stream#readme
-license:             BSD3
-license-file:        LICENSE
-author:              Bodigrim
-maintainer:          andrew.lelechenko@gmail.com
-copyright:           2017-2018 Bodigrim
-build-type:          Simple
-extra-source-files:  README.md
-cabal-version:       >=1.10
-synopsis:            Lazy, infinite streams with O(1) indexing.
-
-library
-  exposed-modules:     Data.Chimera
-                       Data.Chimera.Bool
-                       Data.Chimera.ContinuousMapping
-                       Data.Chimera.Unboxed
-                       Data.Chimera.WheelMapping
-  other-modules:       Data.Chimera.Compat
-                       Data.Chimera.FromIntegral
-  build-depends:         base >= 4.5 && < 5
-                       , ghc-prim
-                       , vector
-  if impl(ghc < 7.10)
-    build-depends:       transformers
-  default-language:    Haskell2010
-  ghc-options:         -Wall -O2
+name: bit-stream
+version: 0.1.0.2
+cabal-version: >=1.10
+build-type: Simple
+license: BSD3
+license-file: LICENSE
+copyright: 2017-2018 Bodigrim
+maintainer: andrew.lelechenko@gmail.com
+homepage: https://github.com/Bodigrim/bit-stream#readme
+synopsis: Lazy, infinite streams with O(1) indexing.
+author: Bodigrim
+extra-source-files:
+  README.md
 
 source-repository head
-  type:     git
+  type: git
   location: https://github.com/Bodigrim/bit-stream
 
-test-suite test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  ghc-options:         -Wall -O2
-  main-is:             Test.hs
-  default-language:    Haskell2010
-  build-depends:         base >= 4.5 && < 5
-                       , bit-stream
-                       , QuickCheck >= 2.10
-                       , tasty
-                       , tasty-hunit
-                       , tasty-quickcheck
-                       , tasty-smallcheck
-                       , vector
+library
+  build-depends:
+    base >=4.5 && <5,
+    ghc-prim,
+    vector
+  if impl(ghc <7.10)
+    build-depends:
+      transformers -any
+  exposed-modules:
+    Data.Chimera
+    Data.Chimera.Bool
+    Data.Chimera.ContinuousMapping
+    Data.Chimera.Unboxed
+    Data.Chimera.WheelMapping
+  other-modules:
+    Data.Chimera.Compat
+    Data.Chimera.FromIntegral
+  default-language: Haskell2010
+  ghc-options: -Wall -O2
 
-executable find-foo
-  buildable:           False
-  main-is:             find-foo.hs
-  hs-source-dirs:      app
-  build-depends:       base >= 4.5 && < 5
-                     , bit-stream
-                     , vector
-  default-language:    Haskell2010
-  ghc-options:         -Wall -O2
+test-suite test
+  build-depends:
+    base >=4.5 && <5,
+    bit-stream -any,
+    QuickCheck >=2.10,
+    tasty -any,
+    tasty-hunit -any,
+    tasty-quickcheck -any,
+    tasty-smallcheck -any,
+    vector -any
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  default-language: Haskell2010
+  hs-source-dirs: test
+  ghc-options: -Wall -O2
 
 benchmark bench
-  type:                exitcode-stdio-1.0
-  main-is:             Bench.hs
-  hs-source-dirs:      bench
-  build-depends:         base >= 4.5 && < 5
-                       , bit-stream
-                       , gauge
-  default-language:    Haskell2010
-  ghc-options:         -O2
+  build-depends:
+    base >=4.5 && <5,
+    bit-stream -any,
+    gauge -any
+  type: exitcode-stdio-1.0
+  main-is: Bench.hs
+  default-language: Haskell2010
+  hs-source-dirs: bench
+  ghc-options: -O2
+
+executable find-foo
+  buildable: False
+  build-depends:
+    base >=4.5 && <5,
+    bit-stream -any,
+    vector -any
+  main-is: find-foo.hs
+  default-language: Haskell2010
+  hs-source-dirs: app
+  ghc-options: -Wall -O2
