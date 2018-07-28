@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.BitStream.ContinuousMapping
+-- Module:      Data.Chimera.ContinuousMapping
 -- Copyright:   (c) 2017 Andrew Lelechenko
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
@@ -13,7 +13,7 @@
 -- An infinite plain board of live and dead cells (common for cellular automatons,
 -- e. g., <https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life Conway's Game of Life>)
 -- can be represented as a predicate @board@ :: 'Int' -> 'Int' -> 'Bool'. Assume that
--- we want to convert it to memoized form. We cannot do it directly, because 'Data.BitStream.tabulate'
+-- we want to convert it to memoized form. We cannot do it directly, because 'Data.Chimera.Bool.tabulate'
 -- accepts predicates from 'Word' to 'Bool' only.
 --
 -- The first step is to define:
@@ -39,14 +39,14 @@
 -- > board'' :: Int -> Int -> Bool
 -- > board'' x y = index board' $ toZCurve (intToWord x) (intToWord y)
 -- >
--- > board' :: BitStream
+-- > board' :: Chimera
 -- > board' = tabulate $
 -- >   \z -> let (x, y) = fromZCurve z in
 -- >         board (wordToInt x) (wordToInt y)
 
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
-module Data.BitStream.ContinuousMapping
+module Data.Chimera.ContinuousMapping
   ( intToWord
   , wordToInt
   , toZCurve

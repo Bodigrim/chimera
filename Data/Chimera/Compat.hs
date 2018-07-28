@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.BitStream.Compat
+-- Module:      Data.Chimera.Compat
 -- Copyright:   (c) 2017 Andrew Lelechenko
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
@@ -10,7 +10,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# OPTIONS_HADDOCK hide #-}
 
-module Data.BitStream.Compat
+module Data.Chimera.Compat
   ( clz
   , fbs
   ) where

@@ -5,19 +5,20 @@ license:             BSD3
 license-file:        LICENSE
 author:              Bodigrim
 maintainer:          andrew.lelechenko@gmail.com
-copyright:           2017 Bodigrim
+copyright:           2017-2018 Bodigrim
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
-synopsis:            Lazy, infinite, compact stream of Bool with O(1) indexing.
+synopsis:            Lazy, infinite streams with O(1) indexing.
 
 library
-  exposed-modules:     Data.BitStream
-                       Data.BitStream.ContinuousMapping
-                       Data.BitStream.WheelMapping
-                       Data.Chimera
+  exposed-modules:     Data.Chimera
+                       Data.Chimera.Bool
+                       Data.Chimera.ContinuousMapping
                        Data.Chimera.Unboxed
-  other-modules:       Data.BitStream.Compat
+                       Data.Chimera.WheelMapping
+  other-modules:       Data.Chimera.Compat
+                       Data.Chimera.FromIntegral
   build-depends:         base >= 4.5 && < 5
                        , ghc-prim
                        , vector

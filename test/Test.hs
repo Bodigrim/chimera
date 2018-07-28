@@ -15,13 +15,13 @@ import Data.List
 import qualified Data.Vector.Unboxed as U
 import Data.Word
 
-import qualified Data.BitStream as BS
-import Data.BitStream.ContinuousMapping
-import Data.BitStream.WheelMapping
+import qualified Data.Chimera.Bool as BS
+import Data.Chimera.ContinuousMapping
+import Data.Chimera.WheelMapping
 import qualified Data.Chimera as Ch
 import qualified Data.Chimera.Unboxed as ChU
 
-instance Arbitrary BS.BitStream where
+instance Arbitrary BS.Chimera where
   arbitrary = BS.tabulateM (const arbitrary)
 
 instance Arbitrary a => Arbitrary (Ch.Chimera a) where

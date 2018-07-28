@@ -5,7 +5,7 @@
 module Main where
 
 import Data.Bits
-import Data.BitStream.WheelMapping
+import Data.Chimera.WheelMapping
 
 data Expr r
   = Var

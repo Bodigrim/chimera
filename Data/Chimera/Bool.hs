@@ -1,10 +1,10 @@
 -- |
--- Module:      Data.BitStream
+-- Module:      Data.Chimera.Bool
 -- Copyright:   (c) 2017 Andrew Lelechenko
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
--- Lazy, infinite, compact stream of 'Bool' with O(1) indexing.
+-- Semilazy, infinite, compact stream of 'Bool' with O(1) indexing.
 -- Most useful for memoization of predicates.
 --
 -- __Example 1__
@@ -16,10 +16,10 @@
 -- > isOdd n = not (isOdd (n - 1))
 --
 -- Its computation is expensive, so we'd like to memoize its values into
--- 'BitStream' using 'tabulate' and access this stream via 'index'
+-- 'Chimera' using 'tabulate' and access this stream via 'index'
 -- instead of recalculation of @isOdd@:
 --
--- > isOddBS :: BitStream
+-- > isOddBS :: Chimera
 -- > isOddBS = tabulate isOdd
 -- >
 -- > isOdd' :: Word -> Bool
@@ -35,7 +35,7 @@
 --
 -- and use 'tabulateFix':
 --
--- > isOddBS :: BitStream
+-- > isOddBS :: Chimera
 -- > isOddBS = tabulateFix isOddF
 -- >
 -- > isOdd' :: Word -> Bool
@@ -64,7 +64,7 @@
 --
 -- Create its memoized version for faster evaluation:
 --
--- > isPrimeBS :: BitStream
+-- > isPrimeBS :: Chimera
 -- > isPrimeBS = tabulateFix isPrimeF
 -- >
 -- > isPrime' :: Word -> Bool
@@ -74,8 +74,8 @@
 
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
-module Data.BitStream
-  ( BitStream
+module Data.Chimera.Bool
+  ( Chimera
   , tabulate
   , tabulateFix
   , tabulateM
@@ -102,9 +102,9 @@ import Data.Functor.Identity
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector as V
 import Data.Word
-import Unsafe.Coerce
 
-import Data.BitStream.Compat
+import Data.Chimera.Compat
+import Data.Chimera.FromIntegral
 
 -- | Compact representation of infinite stream of 'Bool'.
 --
@@ -119,13 +119,7 @@ import Data.BitStream.Compat
 -- Moreover, it is lazy: querying n-th element triggers computation
 -- of first @max(64, 2 ^ ceiling (logBase 2 n))@ elements only. On contrary,
 -- sets and unboxed vectors are completely strict.
-newtype BitStream = BitStream { _unBitStream :: V.Vector (U.Vector Word) }
-
-word2int :: Word -> Int
-word2int = unsafeCoerce
-
-int2word :: Int -> Word
-int2word = unsafeCoerce
+newtype Chimera = Chimera { _unChimera :: V.Vector (U.Vector Word) }
 
 bits :: Int
 bits = fbs (0 :: Word)
@@ -136,17 +130,17 @@ bitsLog = bits - 1 - word2int (clz (int2word bits))
 -- | Create a bit stream from the predicate.
 -- The predicate must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
-tabulate :: (Word -> Bool) -> BitStream
+tabulate :: (Word -> Bool) -> Chimera
 tabulate f = runIdentity $ tabulateM (return . f)
 
 -- | Create a bit stream from the monadic predicate.
 -- The predicate must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
-tabulateM :: forall m. Monad m => (Word -> m Bool) -> m BitStream
+tabulateM :: forall m. Monad m => (Word -> m Bool) -> m Chimera
 tabulateM f = do
   z  <- tabulateW 0
   zs <- V.generateM (bits - bitsLog) tabulateU
-  return $ BitStream $ U.singleton z `V.cons` zs
+  return $ Chimera $ U.singleton z `V.cons` zs
   where
     tabulateU :: Int -> m (U.Vector Word)
     tabulateU i = U.generateM ii (\j -> tabulateW (ii + j))
@@ -160,25 +154,25 @@ tabulateM f = do
         go acc k = do
           b <- f (int2word $ jj + k)
           return $ if b then acc `setBit` k else acc
-{-# SPECIALIZE tabulateM :: (Word -> Identity Bool) -> Identity BitStream #-}
+{-# SPECIALIZE tabulateM :: (Word -> Identity Bool) -> Identity Chimera #-}
 
 -- | Create a bit stream from the unfixed predicate.
 -- The predicate must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
-tabulateFix :: ((Word -> Bool) -> Word -> Bool) -> BitStream
+tabulateFix :: ((Word -> Bool) -> Word -> Bool) -> Chimera
 tabulateFix uf = runIdentity $ tabulateFixM ((return .) . uf . (runIdentity .))
 
 -- | Create a bit stream from the unfixed monadic predicate.
 -- The predicate must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
-tabulateFixM :: forall m. Monad m => ((Word -> m Bool) -> Word -> m Bool) -> m BitStream
+tabulateFixM :: forall m. Monad m => ((Word -> m Bool) -> Word -> m Bool) -> m Chimera
 tabulateFixM uf = bs
   where
-    bs :: m BitStream
+    bs :: m Chimera
     bs = do
       z  <- tabulateW (fix uf) 0
       zs <- V.generateM (bits - bitsLog) tabulateU
-      return $ BitStream $ U.singleton z `V.cons` zs
+      return $ Chimera $ U.singleton z `V.cons` zs
 
     tabulateU :: Int -> m (U.Vector Word)
     tabulateU i = U.generateM ii (\j -> tabulateW (uf f) (ii + j))
@@ -196,13 +190,13 @@ tabulateFixM uf = bs
         go acc k = do
           b <- f (int2word $ jj + k)
           return $ if b then acc `setBit` k else acc
-{-# SPECIALIZE tabulateFixM :: ((Word -> Identity Bool) -> Word -> Identity Bool) -> Identity BitStream #-}
+{-# SPECIALIZE tabulateFixM :: ((Word -> Identity Bool) -> Word -> Identity Bool) -> Identity Chimera #-}
 
 -- | Convert a bit stream back to predicate.
 -- Indexing itself works in O(1) time, but triggers evaluation and allocation
 -- of surrounding elements of the stream, if they were not computed before.
-index :: BitStream -> Word -> Bool
-index (BitStream vus) i =
+index :: Chimera -> Word -> Bool
+index (Chimera vus) i =
   if sgm < 0 then indexU (V.unsafeHead vus) (word2int i)
   else indexU (vus `V.unsafeIndex` (sgm + 1)) (word2int $ i - int2word bits `shiftL` sgm)
   where
@@ -216,15 +210,15 @@ index (BitStream vus) i =
         jLo = j .&. (bits - 1)
 
 -- | List indices of elements equal to 'True'.
-trueIndices :: BitStream -> [Word]
+trueIndices :: Chimera -> [Word]
 trueIndices bs = someIndices True bs
 
 -- | List indices of elements equal to 'False'.
-falseIndices :: BitStream -> [Word]
+falseIndices :: Chimera -> [Word]
 falseIndices bs = someIndices False bs
 
-someIndices :: Bool -> BitStream -> [Word]
-someIndices bool (BitStream b) = V.ifoldr goU [] b
+someIndices :: Bool -> Chimera -> [Word]
+someIndices bool (Chimera b) = V.ifoldr goU [] b
   where
     goU :: Int -> U.Vector Word -> [Word] -> [Word]
     goU i vec rest = U.ifoldr (\j -> goW (ii + j)) rest vec
@@ -243,18 +237,18 @@ someIndices bool (BitStream b) = V.ifoldr goU [] b
 {-# INLINE someIndices #-}
 
 -- | Element-wise 'not'.
-not :: BitStream -> BitStream
-not (BitStream vus) = BitStream $ V.map (U.map (maxBound -)) vus
+not :: Chimera -> Chimera
+not (Chimera vus) = Chimera $ V.map (U.map (maxBound -)) vus
 
 -- | Map over all indices and respective elements in the stream.
-mapWithKey :: (Word -> Bool -> Bool) -> BitStream -> BitStream
+mapWithKey :: (Word -> Bool -> Bool) -> Chimera -> Chimera
 mapWithKey f = runIdentity . traverseWithKey ((return .) . f)
 
 -- | Traverse over all indices and respective elements in the stream.
-traverseWithKey :: forall m. Monad m => (Word -> Bool -> m Bool) -> BitStream -> m BitStream
-traverseWithKey f (BitStream bs) = do
+traverseWithKey :: forall m. Monad m => (Word -> Bool -> m Bool) -> Chimera -> m Chimera
+traverseWithKey f (Chimera bs) = do
   bs' <- V.imapM g bs
-  return $ BitStream bs'
+  return $ Chimera bs'
   where
     g :: Int -> U.Vector Word -> m (U.Vector Word)
     g 0         = U.imapM h
@@ -268,25 +262,25 @@ traverseWithKey f (BitStream bs) = do
         go acc k = do
           b <- f (int2word $ offset + k) (testBit w k)
           return $ if b then acc `setBit` k else acc
-{-# SPECIALIZE traverseWithKey :: (Word -> Bool -> Identity Bool) -> BitStream -> Identity BitStream #-}
+{-# SPECIALIZE traverseWithKey :: (Word -> Bool -> Identity Bool) -> Chimera -> Identity Chimera #-}
 
 -- | Element-wise 'and'.
-and :: BitStream -> BitStream -> BitStream
-and (BitStream vus) (BitStream wus) = BitStream $ V.zipWith (U.zipWith (.&.)) vus wus
+and :: Chimera -> Chimera -> Chimera
+and (Chimera vus) (Chimera wus) = Chimera $ V.zipWith (U.zipWith (.&.)) vus wus
 
 -- | Element-wise 'or'.
-or  :: BitStream -> BitStream -> BitStream
-or (BitStream vus) (BitStream wus) = BitStream $ V.zipWith (U.zipWith (.|.)) vus wus
+or  :: Chimera -> Chimera -> Chimera
+or (Chimera vus) (Chimera wus) = Chimera $ V.zipWith (U.zipWith (.|.)) vus wus
 
 -- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
-zipWithKey :: (Word -> Bool -> Bool -> Bool) -> BitStream -> BitStream -> BitStream
+zipWithKey :: (Word -> Bool -> Bool -> Bool) -> Chimera -> Chimera -> Chimera
 zipWithKey f = (runIdentity .) . zipWithKeyM (((return .) .) . f)
 
 -- | Zip two streams with the monadic function, which is provided with an index and respective elements of both streams.
-zipWithKeyM :: forall m. Monad m => (Word -> Bool -> Bool -> m Bool) -> BitStream -> BitStream -> m BitStream
-zipWithKeyM f (BitStream bs1) (BitStream bs2) = do
+zipWithKeyM :: forall m. Monad m => (Word -> Bool -> Bool -> m Bool) -> Chimera -> Chimera -> m Chimera
+zipWithKeyM f (Chimera bs1) (Chimera bs2) = do
   bs' <- V.izipWithM g bs1 bs2
-  return $ BitStream bs'
+  return $ Chimera bs'
   where
     g :: Int -> U.Vector Word -> U.Vector Word -> m (U.Vector Word)
     g 0         = U.izipWithM h
@@ -300,4 +294,4 @@ zipWithKeyM f (BitStream bs1) (BitStream bs2) = do
         go acc k = do
           b <- f (int2word $ offset + k) (testBit w1 k) (testBit w2 k)
           return $ if b then acc `setBit` k else acc
-{-# SPECIALIZE zipWithKeyM :: (Word -> Bool -> Bool -> Identity Bool) -> BitStream -> BitStream -> Identity BitStream #-}
+{-# SPECIALIZE zipWithKeyM :: (Word -> Bool -> Bool -> Identity Bool) -> Chimera -> Chimera -> Identity Chimera #-}

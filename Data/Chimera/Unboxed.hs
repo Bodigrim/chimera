@@ -4,7 +4,7 @@
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
--- Lazy, infinite stream with O(1) indexing.
+-- Semilazy, infinite stream with O(1) indexing.
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -34,9 +34,9 @@ import Data.Functor.Identity
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as U
 import Data.Word
-import Unsafe.Coerce
 
-import Data.BitStream.Compat
+import Data.Chimera.Compat
+import Data.Chimera.FromIntegral
 
 -- | Representation of infinite stream.
 --
@@ -47,12 +47,6 @@ import Data.BitStream.Compat
 -- of first @2 ^ ceiling (logBase 2 n)@ elements only. On contrary,
 -- sets and unboxed vectors are completely strict.
 newtype Chimera a = Chimera { _unChimera :: V.Vector (U.Vector a) }
-
-word2int :: Word -> Int
-word2int = unsafeCoerce
-
-int2word :: Int -> Word
-int2word = unsafeCoerce
 
 bits :: Int
 bits = fbs (0 :: Word)

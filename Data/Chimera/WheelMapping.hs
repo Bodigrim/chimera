@@ -1,5 +1,5 @@
 -- |
--- Module:      Data.BitStream.WheelMapping
+-- Module:      Data.Chimera.WheelMapping
 -- Copyright:   (c) 2017 Andrew Lelechenko
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
@@ -12,7 +12,7 @@
 -- Let 'isPrime' be an expensive predicate, which checks whether its
 -- argument is a prime number. We can improve performance of repetitive reevaluation by memoization:
 --
--- > isPrimeBS :: BitStream
+-- > isPrimeBS :: Chimera
 -- > isPrimeBS = tabulate isPrime
 -- >
 -- > isPrime' :: Word -> Bool
@@ -22,7 +22,7 @@
 -- So we can save half of space by memoizing the predicate for odd
 -- numbers only:
 --
--- > isPrimeBS2 :: BitStream
+-- > isPrimeBS2 :: Chimera
 -- > isPrimeBS2 = tabulate (\n -> isPrime (2 * n + 1))
 -- >
 -- > isPrime2' :: Word -> Bool
@@ -33,7 +33,7 @@
 --
 -- or, using 'fromWheel2' and 'toWheel2',
 --
--- > isPrimeBS2 :: BitStream
+-- > isPrimeBS2 :: Chimera
 -- > isPrimeBS2 = tabulate (isPrime . fromWheel2)
 -- >
 -- > isPrime2' :: Word -> Bool
@@ -44,7 +44,7 @@
 --
 -- Well, we also know that all primes, except 2 and 3, are coprime to 6; and all primes, except 2, 3 and 5, are coprime 30. So we can save even more space by writing
 --
--- > isPrimeBS6 :: BitStream
+-- > isPrimeBS6 :: Chimera
 -- > isPrimeBS6 = tabulate (isPrime . fromWheel6)
 -- >
 -- > isPrime6' :: Word -> Bool
@@ -55,7 +55,7 @@
 --
 -- or
 --
--- > isPrimeBS30 :: BitStream
+-- > isPrimeBS30 :: Chimera
 -- > isPrimeBS30 = tabulate (isPrime . fromWheel30)
 -- >
 -- > isPrime30' :: Word -> Bool
@@ -64,7 +64,7 @@
 -- >   | n `gcd` 30 /= 1    = False
 -- >   | otherwise          = index isPrimeBS30 (toWheel30 n)
 
-module Data.BitStream.WheelMapping
+module Data.Chimera.WheelMapping
   ( fromWheel2
   , toWheel2
   , fromWheel6

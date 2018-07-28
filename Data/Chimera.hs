@@ -37,9 +37,9 @@ import Data.Function (fix)
 import Data.Functor.Identity
 import qualified Data.Vector as V
 import Data.Word
-import Unsafe.Coerce
 
-import Data.BitStream.Compat
+import Data.Chimera.Compat
+import Data.Chimera.FromIntegral
 
 -- | Representation of infinite stream.
 --
@@ -59,12 +59,6 @@ instance Applicative Chimera where
 #if __GLASGOW_HASKELL__ > 801
   liftA2 = zipWithKey . const
 #endif
-
-word2int :: Word -> Int
-word2int = unsafeCoerce
-
-int2word :: Int -> Word
-int2word = unsafeCoerce
 
 bits :: Int
 bits = fbs (0 :: Word)

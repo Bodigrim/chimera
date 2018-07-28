@@ -4,7 +4,7 @@ module Main where
 
 import Criterion.Main
 
-import Data.BitStream.WheelMapping
+import Data.Chimera.WheelMapping
 import Data.Word
 
 doBench :: String -> (Word -> Word) -> Benchmark
