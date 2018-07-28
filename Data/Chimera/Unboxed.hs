@@ -110,16 +110,16 @@ toList :: U.Unbox a => Chimera a -> [a]
 toList (Chimera vus) = foldMap U.toList vus
 
 -- | Map over all indices and respective elements in the stream.
-mapWithKey :: U.Unbox a => (Word -> a -> a) -> Chimera a -> Chimera a
+mapWithKey :: (U.Unbox a, U.Unbox b) => (Word -> a -> b) -> Chimera a -> Chimera b
 mapWithKey f = runIdentity . traverseWithKey ((return .) . f)
 
 -- | Traverse over all indices and respective elements in the stream.
-traverseWithKey :: forall m a. (Monad m, U.Unbox a) => (Word -> a -> m a) -> Chimera a -> m (Chimera a)
+traverseWithKey :: forall m a b. (Monad m, U.Unbox a, U.Unbox b) => (Word -> a -> m b) -> Chimera a -> m (Chimera b)
 traverseWithKey f (Chimera bs) = do
   bs' <- V.imapM g bs
   return $ Chimera bs'
   where
-    g :: Int -> U.Vector a -> m (U.Vector a)
+    g :: Int -> U.Vector a -> m (U.Vector b)
     g 0         = U.imapM (f . int2word)
     g logOffset = U.imapM (f . int2word . (+ offset))
       where
@@ -127,16 +127,16 @@ traverseWithKey f (Chimera bs) = do
 {-# SPECIALIZE traverseWithKey :: U.Unbox a => (Word -> a -> Identity a) -> Chimera a -> Identity (Chimera a) #-}
 
 -- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
-zipWithKey :: U.Unbox a => (Word -> a -> a -> a) -> Chimera a -> Chimera a -> Chimera a
+zipWithKey :: (U.Unbox a, U.Unbox b, U.Unbox c) => (Word -> a -> b -> c) -> Chimera a -> Chimera b -> Chimera c
 zipWithKey f = (runIdentity .) . zipWithKeyM (((return .) .) . f)
 
 -- | Zip two streams with the monadic function, which is provided with an index and respective elements of both streams.
-zipWithKeyM :: forall m a. (Monad m, U.Unbox a) => (Word -> a -> a -> m a) -> Chimera a -> Chimera a -> m (Chimera a)
+zipWithKeyM :: forall m a b c. (Monad m, U.Unbox a, U.Unbox b, U.Unbox c) => (Word -> a -> b -> m c) -> Chimera a -> Chimera b -> m (Chimera c)
 zipWithKeyM f (Chimera bs1) (Chimera bs2) = do
   bs' <- V.izipWithM g bs1 bs2
   return $ Chimera bs'
   where
-    g :: Int -> U.Vector a -> U.Vector a -> m (U.Vector a)
+    g :: Int -> U.Vector a -> U.Vector b -> m (U.Vector c)
     g 0         = U.izipWithM (f . int2word)
     g logOffset = U.izipWithM (f . int2word . (+ offset))
       where

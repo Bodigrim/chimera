@@ -112,16 +112,16 @@ index (Chimera vus) i = V.unsafeIndex (vus `V.unsafeIndex` (sgm + 1)) (word2int 
     sgm = fbs i - 1 - word2int (clz i)
 
 -- | Map over all indices and respective elements in the stream.
-mapWithKey :: (Word -> a -> a) -> Chimera a -> Chimera a
+mapWithKey :: (Word -> a -> b) -> Chimera a -> Chimera b
 mapWithKey f = runIdentity . traverseWithKey ((return .) . f)
 
 -- | Traverse over all indices and respective elements in the stream.
-traverseWithKey :: forall m a. Monad m => (Word -> a -> m a) -> Chimera a -> m (Chimera a)
+traverseWithKey :: forall m a b. Monad m => (Word -> a -> m b) -> Chimera a -> m (Chimera b)
 traverseWithKey f (Chimera bs) = do
   bs' <- V.imapM g bs
   return $ Chimera bs'
   where
-    g :: Int -> V.Vector a -> m (V.Vector a)
+    g :: Int -> V.Vector a -> m (V.Vector b)
     g 0         = V.imapM (f . int2word)
     g logOffset = V.imapM (f . int2word . (+ offset))
       where
@@ -129,16 +129,16 @@ traverseWithKey f (Chimera bs) = do
 {-# SPECIALIZE traverseWithKey :: (Word -> a -> Identity a) -> Chimera a -> Identity (Chimera a) #-}
 
 -- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
-zipWithKey :: (Word -> a -> a -> a) -> Chimera a -> Chimera a -> Chimera a
+zipWithKey :: (Word -> a -> b -> c) -> Chimera a -> Chimera b -> Chimera c
 zipWithKey f = (runIdentity .) . zipWithKeyM (((return .) .) . f)
 
 -- | Zip two streams with the monadic function, which is provided with an index and respective elements of both streams.
-zipWithKeyM :: forall m a. Monad m => (Word -> a -> a -> m a) -> Chimera a -> Chimera a -> m (Chimera a)
+zipWithKeyM :: forall m a b c. Monad m => (Word -> a -> b -> m c) -> Chimera a -> Chimera b -> m (Chimera c)
 zipWithKeyM f (Chimera bs1) (Chimera bs2) = do
   bs' <- V.izipWithM g bs1 bs2
   return $ Chimera bs'
   where
-    g :: Int -> V.Vector a -> V.Vector a -> m (V.Vector a)
+    g :: Int -> V.Vector a -> V.Vector b -> m (V.Vector c)
     g 0         = V.izipWithM (f . int2word)
     g logOffset = V.izipWithM (f . int2word . (+ offset))
       where
