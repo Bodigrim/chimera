@@ -90,10 +90,10 @@ install:
 script:
   # test that source-distributions can be generated
   - (cd "." && cabal sdist)
-  - mv "."/dist/bit-stream-*.tar.gz ${DISTDIR}/
+  - mv "."/dist/chimera-*.tar.gz ${DISTDIR}/
   - cd ${DISTDIR} || false
   - find . -maxdepth 1 -name '*.tar.gz' -exec tar -xvf '{}' \;
-  - "printf 'packages: bit-stream-*/*.cabal\\n' > cabal.project"
+  - "printf 'packages: chimera-*/*.cabal\\n' > cabal.project"
   - cat cabal.project
   # this builds all libraries and executables (without tests/benchmarks)
   - cabal new-build -w ${HC} --disable-tests --disable-benchmarks -f check-bounds all
@@ -109,5 +109,5 @@ script:
   - rm -rf ./dist-newstyle
   - if $HADDOCK; then cabal new-haddock -w ${HC} ${TEST} ${BENCH} all; else echo "Skipping haddock generation";fi
 
-# REGENDATA ["bit-stream.cabal"]
+# REGENDATA ["chimera.cabal"]
 # EOF

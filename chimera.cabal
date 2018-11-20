@@ -1,12 +1,12 @@
-name: bit-stream
-version: 0.1.0.2
+name: chimera
+version: 0.2.0.0
 cabal-version: >=1.10
 build-type: Simple
 license: BSD3
 license-file: LICENSE
 copyright: 2017-2018 Bodigrim
 maintainer: andrew.lelechenko@gmail.com
-homepage: https://github.com/Bodigrim/bit-stream#readme
+homepage: https://github.com/Bodigrim/chimera#readme
 synopsis: Lazy, infinite streams with O(1) indexing.
 author: Bodigrim
 extra-source-files:
@@ -14,7 +14,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/Bodigrim/bit-stream
+  location: https://github.com/Bodigrim/chimera
 
 library
   build-depends:
@@ -39,7 +39,7 @@ library
 test-suite test
   build-depends:
     base >=4.5 && <5,
-    bit-stream -any,
+    chimera -any,
     QuickCheck >=2.10,
     tasty -any,
     tasty-hunit -any,
@@ -55,7 +55,7 @@ test-suite test
 benchmark bench
   build-depends:
     base >=4.5 && <5,
-    bit-stream -any,
+    chimera -any,
     gauge -any
   type: exitcode-stdio-1.0
   main-is: Bench.hs
@@ -67,7 +67,7 @@ executable find-foo
   buildable: False
   build-depends:
     base >=4.5 && <5,
-    bit-stream -any,
+    chimera -any,
     vector -any
   main-is: find-foo.hs
   default-language: Haskell2010
