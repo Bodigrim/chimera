@@ -16,15 +16,17 @@
 
 module Data.Chimera
   ( Chimera
+  , index
+
+  -- * Construction
   , tabulate
   , tabulateFix
   , tabulateM
   , tabulateFixM
-  , index
 
+  -- * Manipulation
   , mapWithKey
   , traverseWithKey
-
   , zipWithKey
   , zipWithKeyM
   ) where
@@ -41,14 +43,8 @@ import Data.Word
 import Data.Chimera.Compat
 import Data.Chimera.FromIntegral
 
--- | Representation of infinite stream.
---
--- It offers indexing in constant time.
--- Compare it to linear time for lists and logarithmic time for sets.
---
--- Moreover, it is lazy: querying n-th element triggers computation
--- of first @2 ^ ceiling (logBase 2 n)@ elements only. On contrary,
--- sets and unboxed vectors are completely strict.
+-- | Representation of a lazy infinite stream, offering
+-- indexing via 'index' in constant time.
 newtype Chimera a = Chimera { _unChimera :: V.Vector (V.Vector a) }
   deriving (Functor, Foldable, Traversable)
 

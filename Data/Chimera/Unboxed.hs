@@ -12,21 +12,23 @@
 
 module Data.Chimera.Unboxed
   ( Chimera
+  , index
+  , toList
+
+  -- * Construction
   , tabulate
   , tabulateFix
   , tabulateM
   , tabulateFixM
-  , index
-  , toList
 
+  -- * Manipulation
   , mapWithKey
   , traverseWithKey
-
   , zipWithKey
   , zipWithKeyM
   ) where
 
-import Prelude hiding ((^), (*), div, mod, fromIntegral, not, and, or)
+import Prelude hiding ((^), (*), div, mod, fromIntegral, not, and, or, iterate)
 import Data.Bits
 import Data.Foldable hiding (and, or, toList)
 import Data.Function (fix)
@@ -38,14 +40,12 @@ import Data.Word
 import Data.Chimera.Compat
 import Data.Chimera.FromIntegral
 
--- | Representation of infinite stream.
+-- | Representation of an infinite stream, offering
+-- indexing via 'index' in constant time.
 --
--- It offers indexing in constant time.
--- Compare it to linear time for lists and logarithmic time for sets.
---
--- Moreover, it is lazy: querying n-th element triggers computation
--- of first @2 ^ ceiling (logBase 2 n)@ elements only. On contrary,
--- sets and unboxed vectors are completely strict.
+-- This representation is less lazy than 'Data.Chimera.Chimera':
+-- Querying n-th element triggers computation
+-- of first @2 ^ ceiling (logBase 2 n)@ elements.
 newtype Chimera a = Chimera { _unChimera :: V.Vector (U.Vector a) }
 
 bits :: Int

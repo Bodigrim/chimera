@@ -76,18 +76,20 @@
 
 module Data.Chimera.Bool
   ( Chimera
-  , tabulate
-  , tabulateFix
-  , tabulateM
-  , tabulateFixM
   , index
   , trueIndices
   , falseIndices
 
+  -- * Construction
+  , tabulate
+  , tabulateFix
+  , tabulateM
+  , tabulateFixM
+
+  -- * Manipulation
   , mapWithKey
   , traverseWithKey
   , not
-
   , zipWithKey
   , zipWithKeyM
   , and
@@ -106,19 +108,17 @@ import Data.Word
 import Data.Chimera.Compat
 import Data.Chimera.FromIntegral
 
--- | Compact representation of infinite stream of 'Bool'.
+-- | Compact representation of an infinite stream of 'Bool', offering
+-- indexing via 'index' in constant time.
 --
 -- It spends one bit (1/8 byte) for one 'Bool' in store.
 -- Compare it to at least 24 bytes per element in @[Bool]@,
 -- approximately 2 bytes per element in 'IntSet'
 -- and 1 byte per element in unboxed @Vector Bool@.
 --
--- It also offers indexing in constant time.
--- Compare it to linear time for lists and logarithmic time for sets.
---
--- Moreover, it is lazy: querying n-th element triggers computation
--- of first @max(64, 2 ^ ceiling (logBase 2 n))@ elements only. On contrary,
--- sets and unboxed vectors are completely strict.
+-- This representation is less lazy than 'Data.Chimera.Chimera':
+-- Querying n-th element triggers computation
+-- of first @max(64, 2 ^ ceiling (logBase 2 n))@ elements.
 newtype Chimera = Chimera { _unChimera :: V.Vector (U.Vector Word) }
 
 bits :: Int
