@@ -1,7 +1,7 @@
-# bit-stream
+# chimera
 
-Lazy, infinite, compact stream of `Bool` with O(1) indexing.
-Most useful for memoization of predicates.
+Lazy, infinite streams with O(1) indexing.
+Most useful to memoize functions.
 
 ## Example 1
 
@@ -14,11 +14,11 @@ isOdd n = not (isOdd (n - 1))
 ```
 
 Its computation is expensive, so we'd like to memoize its values into
-`BitStream` using `tabulate` and access this stream via `index`
+`Chimera` using `tabulate` and access this stream via `index`
 instead of recalculation of `isOdd`:
 
 ```haskell
-isOddBS :: BitStream
+isOddBS :: Chimera
 isOddBS = tabulate isOdd
 
 isOdd' :: Word -> Bool
@@ -38,7 +38,7 @@ isOddF f n = not (f (n - 1))
 and use `tabulateFix`:
 
 ```haskell
-isOddBS :: BitStream
+isOddBS :: Chimera
 isOddBS = tabulateFix isOddF
 
 isOdd' :: Word -> Bool
@@ -73,7 +73,7 @@ isPrimeF f n
 Create its memoized version for faster evaluation:
 
 ```haskell
-isPrimeBS :: BitStream
+isPrimeBS :: Chimera
 isPrimeBS = tabulateFix isPrimeF
 
 isPrime' :: Word -> Bool
