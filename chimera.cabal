@@ -28,7 +28,6 @@ library
   exposed-modules:
     Data.Chimera
     Data.Chimera.ContinuousMapping
-    Data.Chimera.Unboxed
     Data.Chimera.WheelMapping
   other-modules:
     Data.Chimera.Compat

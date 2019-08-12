@@ -20,20 +20,15 @@ import Data.Word
 import Data.Chimera.ContinuousMapping
 import Data.Chimera.WheelMapping
 import qualified Data.Chimera as Ch
-import qualified Data.Chimera.Unboxed as ChU
 
 instance (G.Vector v a, Arbitrary a) => Arbitrary (Ch.Chimera v a) where
   arbitrary = Ch.tabulateM (const arbitrary)
-
-instance (Arbitrary a, U.Unbox a) => Arbitrary (ChU.Chimera a) where
-  arbitrary = ChU.tabulateM (const arbitrary)
 
 main :: IO ()
 main = defaultMain $ testGroup "All"
   [ contMapTests
   , wheelMapTests
   , chimeraTests
-  , chimeraUnboxedTests
   ]
 
 contMapTests :: TestTree
@@ -95,29 +90,6 @@ chimeraTests = testGroup "Chimera"
     \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Bool, Bool) -> Bool)) ix ->
       let jx = ix `mod` 65536 in
         g (jx, Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2 :: Ch.Chimera V.Vector Bool) jx
-  ]
-
-chimeraUnboxedTests :: TestTree
-chimeraUnboxedTests = testGroup "Chimera Unboxed"
-  [ QC.testProperty "index . tabulate = id" $
-    \(Fun _ (f :: Word -> Bool)) ix ->
-      let jx = ix `mod` 65536 in
-        f jx === ChU.index (ChU.tabulate f) jx
-  , QC.testProperty "index . tabulateFix = fix" $
-    \(Fun _ g) ix ->
-      let jx = ix `mod` 65536 in
-        let f = mkUnfix g in
-          fix f jx === ChU.index (ChU.tabulateFix f) jx
-
-  , QC.testProperty "mapWithKey" $
-    \(Blind bs) (Fun _ (g :: (Word, Bool) -> Bool)) ix ->
-      let jx = ix `mod` 65536 in
-        g (jx, ChU.index bs jx) === ChU.index (ChU.mapWithKey (curry g) bs) jx
-
-  , QC.testProperty "zipWithKey" $
-    \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Bool, Bool) -> Bool)) ix ->
-      let jx = ix `mod` 65536 in
-        g (jx, ChU.index bs1 jx, ChU.index bs2 jx) === ChU.index (ChU.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2) jx
   ]
 
 -------------------------------------------------------------------------------
