@@ -15,14 +15,10 @@ import Data.List
 import qualified Data.Vector.Unboxed as U
 import Data.Word
 
-import qualified Data.Chimera.Bool as BS
 import Data.Chimera.ContinuousMapping
 import Data.Chimera.WheelMapping
 import qualified Data.Chimera as Ch
 import qualified Data.Chimera.Unboxed as ChU
-
-instance Arbitrary BS.Chimera where
-  arbitrary = BS.tabulateM (const arbitrary)
 
 instance Arbitrary a => Arbitrary (Ch.Chimera a) where
   arbitrary = Ch.tabulateM (const arbitrary)
@@ -32,41 +28,15 @@ instance (Arbitrary a, U.Unbox a) => Arbitrary (ChU.Chimera a) where
 
 main :: IO ()
 main = defaultMain $ testGroup "All"
-  [ bitStreamTests
+  [ contMapTests
+  , wheelMapTests
   , chimeraTests
   , chimeraUnboxedTests
   ]
 
-bitStreamTests :: TestTree
-bitStreamTests = testGroup "BitStream"
-  [ QC.testProperty "index . tabulate = id" $
-    \(Fun _ f) ix ->
-      let jx = ix `mod` 65536 in
-        f jx === BS.index (BS.tabulate f) jx
-  , QC.testProperty "index . tabulateFix = fix" $
-    \(Fun _ g) ix ->
-      let jx = ix `mod` 65536 in
-        let f = mkUnfix g in
-          fix f jx === BS.index (BS.tabulateFix f) jx
-
-  , QC.testProperty "trueIndices" $
-    \(Fun _ f) ->
-      take 100 (BS.trueIndices $ BS.tabulate f) === take 100 (filter f [0..])
-  , QC.testProperty "falseIndices" $
-    \(Fun _ f) ->
-      take 100 (BS.falseIndices $ BS.tabulate f) === take 100 (filter (Prelude.not . f) [0..])
-
-  , QC.testProperty "mapWithKey" $
-    \(Blind bs) (Fun _ g) ix ->
-      let jx = ix `mod` 65536 in
-        g (jx, BS.index bs jx) === BS.index (BS.mapWithKey (curry g) bs) jx
-
-  , QC.testProperty "zipWithKey" $
-    \(Blind bs1) (Blind bs2) (Fun _ g) ix ->
-      let jx = ix `mod` 65536 in
-        g (jx, BS.index bs1 jx, BS.index bs2 jx) === BS.index (BS.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2) jx
-
-  , testGroup "wordToInt . intToWord"
+contMapTests :: TestTree
+contMapTests = testGroup "ContinuousMapping"
+  [ testGroup "wordToInt . intToWord"
     [ QC.testProperty "random" $ \i -> w2i_i2w i === i
     , H.testCase "maxBound" $ assertEqual "should be equal" maxBound (w2i_i2w maxBound)
     , H.testCase "minBound" $ assertEqual "should be equal" minBound (w2i_i2w minBound)
@@ -90,8 +60,11 @@ bitStreamTests = testGroup "BitStream"
   , testGroup "from . to Z-curve 3D"
     [ QC.testProperty "random" $ \x y z -> fromZCurve3 (toZCurve3 x y z) === (x `rem` (1 `shiftL` 21), y `rem` (1 `shiftL` 21), z `rem` (1 `shiftL` 21))
     ]
+  ]
 
-  , testGroup "toWheel . fromWheel"
+wheelMapTests :: TestTree
+wheelMapTests = testGroup "WheelMapping"
+  [ testGroup "toWheel . fromWheel"
     [ QC.testProperty   "2" $ \(Shrink2 x) -> x < maxBound `div` 2 ==> toWheel2   (fromWheel2   x) === x
     , QC.testProperty   "6" $ \(Shrink2 x) -> x < maxBound `div` 3 ==> toWheel6   (fromWheel6   x) === x
     , QC.testProperty  "30" $ \(Shrink2 x) -> x < maxBound `div` 4 ==> toWheel30  (fromWheel30  x) === x

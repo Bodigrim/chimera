@@ -27,7 +27,6 @@ library
       transformers -any
   exposed-modules:
     Data.Chimera
-    Data.Chimera.Bool
     Data.Chimera.ContinuousMapping
     Data.Chimera.Unboxed
     Data.Chimera.WheelMapping
