@@ -10,6 +10,8 @@
 {-# LANGUAGE DeriveFoldable      #-}
 {-# LANGUAGE DeriveFunctor       #-}
 {-# LANGUAGE DeriveTraversable   #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
@@ -38,6 +40,7 @@ import Data.Foldable hiding (and, or)
 import Data.Function (fix)
 import Data.Functor.Identity
 import qualified Data.Vector as V
+import qualified Data.Vector.Generic as G
 import Data.Word
 
 import Data.Chimera.Compat
@@ -45,11 +48,11 @@ import Data.Chimera.FromIntegral
 
 -- | Representation of a lazy infinite stream, offering
 -- indexing via 'index' in constant time.
-newtype Chimera a = Chimera { _unChimera :: V.Vector (V.Vector a) }
+newtype Chimera v a = Chimera { _unChimera :: V.Vector (v a) }
   deriving (Functor, Foldable, Traversable)
 
 -- | Similar to 'ZipList'.
-instance Applicative Chimera where
+instance Applicative (Chimera V.Vector) where
   pure   = tabulate   . const
   (<*>)  = zipWithKey (const ($))
 #if __GLASGOW_HASKELL__ > 801
@@ -62,85 +65,111 @@ bits = fbs (0 :: Word)
 -- | Create a stream from the function.
 -- The function must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
-tabulate :: (Word -> a) -> Chimera a
+tabulate :: G.Vector v a => (Word -> a) -> Chimera v a
 tabulate f = runIdentity $ tabulateM (return . f)
 
 -- | Create a stream from the monadic function.
-tabulateM :: forall m a. Monad m => (Word -> m a) -> m (Chimera a)
+tabulateM
+  :: forall m v a.
+     (Monad m, G.Vector v a)
+  => (Word -> m a)
+  -> m (Chimera v a)
 tabulateM f = do
   z  <- f 0
   zs <- V.generateM bits tabulateU
-  return $ Chimera $ V.singleton z `V.cons` zs
+  return $ Chimera $ G.singleton z `V.cons` zs
   where
-    tabulateU :: Int -> m (V.Vector a)
-    tabulateU i = V.generateM ii (\j -> f (int2word (ii + j)))
+    tabulateU :: Int -> m (v a)
+    tabulateU i = G.generateM ii (\j -> f (int2word (ii + j)))
       where
         ii = 1 `shiftL` i
-{-# SPECIALIZE tabulateM :: (Word -> Identity a) -> Identity (Chimera a) #-}
+
+{-# SPECIALIZE tabulateM :: G.Vector v a => (Word -> Identity a) -> Identity (Chimera v a) #-}
 
 -- | Create a stream from the unfixed function.
-tabulateFix :: ((Word -> a) -> Word -> a) -> Chimera a
+tabulateFix :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix uf = runIdentity $ tabulateFixM ((return .) . uf . (runIdentity .))
 
 -- | Create a stream from the unfixed monadic function.
-tabulateFixM :: forall m a. Monad m => ((Word -> m a) -> Word -> m a) -> m (Chimera a)
+tabulateFixM
+  :: forall m v a.
+     (Monad m, G.Vector v a)
+  => ((Word -> m a) -> Word -> m a)
+  -> m (Chimera v a)
 tabulateFixM uf = bs
   where
-    bs :: m (Chimera a)
+    bs :: m (Chimera v a)
     bs = do
       z  <- fix uf 0
       zs <- V.generateM bits tabulateU
-      return $ Chimera $ V.singleton z `V.cons` zs
+      return $ Chimera $ G.singleton z `V.cons` zs
 
-    tabulateU :: Int -> m (V.Vector a)
+    tabulateU :: Int -> m (v a)
     tabulateU i = vs
       where
-        vs = V.generateM ii (\j -> uf f (int2word (ii + j)))
+        vs = G.generateM ii (\j -> uf f (int2word (ii + j)))
         ii = 1 `shiftL` i
         f k = if k < int2word ii
           then flip index k <$> bs
-          else flip V.unsafeIndex (word2int k - ii) <$> vs
+          else flip G.unsafeIndex (word2int k - ii) <$> vs
 
-{-# SPECIALIZE tabulateFixM :: ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera a) #-}
+{-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
 -- | Convert a stream back to a function.
-index :: Chimera a -> Word -> a
-index (Chimera vus) 0 = V.unsafeHead (V.unsafeHead vus)
-index (Chimera vus) i = V.unsafeIndex (vus `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `shiftL` sgm)
+index :: G.Vector v a => Chimera v a -> Word -> a
+index (Chimera vus) 0 = G.unsafeHead (V.unsafeHead vus)
+index (Chimera vus) i = G.unsafeIndex (vus `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `shiftL` sgm)
   where
     sgm :: Int
     sgm = fbs i - 1 - word2int (clz i)
 
 -- | Map over all indices and respective elements in the stream.
-mapWithKey :: (Word -> a -> b) -> Chimera a -> Chimera b
+mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b
 mapWithKey f = runIdentity . traverseWithKey ((return .) . f)
 
 -- | Traverse over all indices and respective elements in the stream.
-traverseWithKey :: forall m a b. Monad m => (Word -> a -> m b) -> Chimera a -> m (Chimera b)
+traverseWithKey
+  :: forall m v a b.
+     (Monad m, G.Vector v a, G.Vector v b)
+  => (Word -> a -> m b)
+  -> Chimera v a
+  -> m (Chimera v b)
 traverseWithKey f (Chimera bs) = do
   bs' <- V.imapM g bs
   return $ Chimera bs'
   where
-    g :: Int -> V.Vector a -> m (V.Vector b)
-    g 0         = V.imapM (f . int2word)
-    g logOffset = V.imapM (f . int2word . (+ offset))
+    g :: Int -> v a -> m (v b)
+    g 0         = G.imapM (f . int2word)
+    g logOffset = G.imapM (f . int2word . (+ offset))
       where
         offset = 1 `shiftL` (logOffset - 1)
-{-# SPECIALIZE traverseWithKey :: (Word -> a -> Identity a) -> Chimera a -> Identity (Chimera a) #-}
+
+{-# SPECIALIZE traverseWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> Identity b) -> Chimera v a -> Identity (Chimera v b) #-}
 
 -- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
-zipWithKey :: (Word -> a -> b -> c) -> Chimera a -> Chimera b -> Chimera c
+zipWithKey
+  :: (G.Vector v a, G.Vector v b, G.Vector v c)
+  => (Word -> a -> b -> c)
+  -> Chimera v a
+  -> Chimera v b
+  -> Chimera v c
 zipWithKey f = (runIdentity .) . zipWithKeyM (((return .) .) . f)
 
 -- | Zip two streams with the monadic function, which is provided with an index and respective elements of both streams.
-zipWithKeyM :: forall m a b c. Monad m => (Word -> a -> b -> m c) -> Chimera a -> Chimera b -> m (Chimera c)
+zipWithKeyM
+  :: forall m v a b c.
+     (Monad m, G.Vector v a, G.Vector v b, G.Vector v c)
+  => (Word -> a -> b -> m c)
+  -> Chimera v a
+  -> Chimera v b
+  -> m (Chimera v c)
 zipWithKeyM f (Chimera bs1) (Chimera bs2) = do
   bs' <- V.izipWithM g bs1 bs2
   return $ Chimera bs'
   where
-    g :: Int -> V.Vector a -> V.Vector b -> m (V.Vector c)
-    g 0         = V.izipWithM (f . int2word)
-    g logOffset = V.izipWithM (f . int2word . (+ offset))
+    g :: Int -> v a -> v b -> m (v c)
+    g 0         = G.izipWithM (f . int2word)
+    g logOffset = G.izipWithM (f . int2word . (+ offset))
       where
         offset = 1 `shiftL` (logOffset - 1)
-{-# SPECIALIZE zipWithKeyM :: (Word -> a -> a -> Identity a) -> Chimera a -> Chimera a -> Identity (Chimera a) #-}
+{-# SPECIALIZE zipWithKeyM :: (G.Vector v a, G.Vector v b, G.Vector v c) => (Word -> a -> b -> Identity c) -> Chimera v a -> Chimera v b -> Identity (Chimera v c) #-}
