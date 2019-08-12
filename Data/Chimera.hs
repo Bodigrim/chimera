@@ -24,8 +24,10 @@ module Data.Chimera
   -- * Construction
   , tabulate
   , tabulateFix
+  , tabulateFixBoxed
   , tabulateM
   , tabulateFixM
+  , tabulateFixBoxedM
 
   -- * Manipulation
   , mapWithKey
@@ -110,11 +112,47 @@ tabulateFixM uf = bs
       where
         vs = G.generateM ii (\j -> uf f (int2word (ii + j)))
         ii = 1 `shiftL` i
-        f k = if k < int2word ii
-          then flip index k <$> bs
-          else flip G.unsafeIndex (word2int k - ii) <$> vs
+        f k
+          | k < int2word ii
+          = flip index k <$> bs
+          | otherwise
+          = uf f k
 
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
+
+-- | Create a stream from the unfixed function.
+tabulateFixBoxed :: ((Word -> a) -> Word -> a) -> Chimera V.Vector a
+tabulateFixBoxed uf = runIdentity $ tabulateFixBoxedM ((return .) . uf . (runIdentity .))
+
+-- | Create a stream from the unfixed monadic function.
+tabulateFixBoxedM
+  :: forall m a.
+     Monad m
+  => ((Word -> m a) -> Word -> m a)
+  -> m (Chimera V.Vector a)
+tabulateFixBoxedM uf = bs
+  where
+    bs :: m (Chimera V.Vector a)
+    bs = do
+      z  <- fix uf 0
+      zs <- V.generateM bits tabulateU
+      return $ Chimera $ G.singleton z `V.cons` zs
+
+    tabulateU :: Int -> m (V.Vector a)
+    tabulateU i = vs
+      where
+        vs = G.generateM ii (\j -> uf f (int2word (ii + j)))
+        ii = 1 `shiftL` i
+        f k
+          | k < int2word ii
+          = flip index k <$> bs
+          | k < int2word (ii `shiftL` 1)
+          -- this requires boxed vector elements!
+          = flip G.unsafeIndex (word2int k - ii) <$> vs
+          | otherwise
+          = uf f k
+
+{-# SPECIALIZE tabulateFixBoxedM :: ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera V.Vector a) #-}
 
 -- | Convert a stream back to a function.
 index :: G.Vector v a => Chimera v a -> Word -> a
@@ -177,4 +215,5 @@ zipWithKeyM f (Chimera bs1) (Chimera bs2) = do
     g logOffset = G.izipWithM (f . int2word . (+ offset))
       where
         offset = 1 `shiftL` (logOffset - 1)
+
 {-# SPECIALIZE zipWithKeyM :: (G.Vector v a, G.Vector v b, G.Vector v c) => (Word -> a -> b -> Identity c) -> Chimera v a -> Chimera v b -> Identity (Chimera v c) #-}
