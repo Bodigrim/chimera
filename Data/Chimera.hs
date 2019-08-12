@@ -19,6 +19,7 @@
 module Data.Chimera
   ( Chimera
   , index
+  , toList
 
   -- * Construction
   , tabulate
@@ -36,7 +37,7 @@ module Data.Chimera
 import Prelude hiding ((^), (*), div, mod, fromIntegral, not, and, or)
 import Control.Applicative
 import Data.Bits
-import Data.Foldable hiding (and, or)
+import Data.Foldable hiding (and, or, toList)
 import Data.Function (fix)
 import Data.Functor.Identity
 import qualified Data.Vector as V
@@ -122,6 +123,10 @@ index (Chimera vus) i = G.unsafeIndex (vus `V.unsafeIndex` (sgm + 1)) (word2int 
   where
     sgm :: Int
     sgm = fbs i - 1 - word2int (clz i)
+
+-- | Convert a stream to a list.
+toList :: G.Vector v a => Chimera v a -> [a]
+toList (Chimera vus) = foldMap G.toList vus
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b
