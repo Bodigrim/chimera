@@ -151,15 +151,8 @@ tabulateFixBoxedM f = result
         subResult = G.generateM ii (\j -> f fixF (int2word (ii + j)))
         ii = 1 `shiftL` i
 
-        fixF :: Word -> m a
-        fixF k
-          | k < int2word ii
-          = flip index k <$> result
-          | k < int2word (ii `shiftL` 1)
-          -- this requires boxed vector elements!
-          = flip G.unsafeIndex (word2int k - ii) <$> subResult
-          | otherwise
-          = f fixF k
+    fixF :: Word -> m a
+    fixF k = flip index k <$> result
 
 {-# SPECIALIZE tabulateFixBoxedM :: ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera V.Vector a) #-}
 
