@@ -29,6 +29,7 @@ module Data.Chimera
   , tabulateFixM
   , tabulateFixBoxedM
 
+  , drop
   , cycle
   , iterate
   , iterateM
@@ -40,7 +41,7 @@ module Data.Chimera
   , zipWithKeyM
   ) where
 
-import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate)
+import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
 import Control.Applicative
 import Data.Bits
 import Data.Foldable hiding (and, or, toList)
@@ -199,6 +200,9 @@ cycle vec = case l of
   _ -> tabulate (G.unsafeIndex vec . word2int . (`rem` l))
   where
     l = int2word $ G.length vec
+
+drop :: G.Vector v a => Word -> Chimera v a -> Chimera v a
+drop n ch = tabulate (index ch . (+ n))
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b
