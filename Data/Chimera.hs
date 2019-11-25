@@ -79,11 +79,11 @@ tabulateM
   -> m (Chimera v a)
 tabulateM f = do
   z  <- f 0
-  zs <- V.generateM bits tabulateU
+  zs <- V.generateM bits tabulateSubVector
   pure $ Chimera $ G.singleton z `V.cons` zs
   where
-    tabulateU :: Int -> m (v a)
-    tabulateU i = G.generateM ii (\j -> f (int2word (ii + j)))
+    tabulateSubVector :: Int -> m (v a)
+    tabulateSubVector i = G.generateM ii (\j -> f (int2word (ii + j)))
       where
         ii = 1 `shiftL` i
 
@@ -99,24 +99,26 @@ tabulateFixM
      (Monad m, G.Vector v a)
   => ((Word -> m a) -> Word -> m a)
   -> m (Chimera v a)
-tabulateFixM uf = bs
+tabulateFixM f = result
   where
-    bs :: m (Chimera v a)
-    bs = do
-      z  <- fix uf 0
-      zs <- V.generateM bits tabulateU
+    result :: m (Chimera v a)
+    result = do
+      z  <- fix f 0
+      zs <- V.generateM bits tabulateSubVector
       pure $ Chimera $ G.singleton z `V.cons` zs
 
-    tabulateU :: Int -> m (v a)
-    tabulateU i = vs
+    tabulateSubVector :: Int -> m (v a)
+    tabulateSubVector i = subResult
       where
-        vs = G.generateM ii (\j -> uf f (int2word (ii + j)))
+        subResult = G.generateM ii (\j -> f fixF (int2word (ii + j)))
         ii = 1 `shiftL` i
-        f k
+
+        fixF :: Word -> m a
+        fixF k
           | k < int2word ii
-          = flip index k <$> bs
+          = flip index k <$> result
           | otherwise
-          = uf f k
+          = f fixF k
 
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
@@ -130,41 +132,43 @@ tabulateFixBoxedM
      Monad m
   => ((Word -> m a) -> Word -> m a)
   -> m (Chimera V.Vector a)
-tabulateFixBoxedM uf = bs
+tabulateFixBoxedM f = result
   where
-    bs :: m (Chimera V.Vector a)
-    bs = do
-      z  <- fix uf 0
-      zs <- V.generateM bits tabulateU
+    result :: m (Chimera V.Vector a)
+    result = do
+      z  <- fix f 0
+      zs <- V.generateM bits tabulateSubVector
       pure $ Chimera $ G.singleton z `V.cons` zs
 
-    tabulateU :: Int -> m (V.Vector a)
-    tabulateU i = vs
+    tabulateSubVector :: Int -> m (V.Vector a)
+    tabulateSubVector i = subResult
       where
-        vs = G.generateM ii (\j -> uf f (int2word (ii + j)))
+        subResult = G.generateM ii (\j -> f fixF (int2word (ii + j)))
         ii = 1 `shiftL` i
-        f k
+
+        fixF :: Word -> m a
+        fixF k
           | k < int2word ii
-          = flip index k <$> bs
+          = flip index k <$> result
           | k < int2word (ii `shiftL` 1)
           -- this requires boxed vector elements!
-          = flip G.unsafeIndex (word2int k - ii) <$> vs
+          = flip G.unsafeIndex (word2int k - ii) <$> subResult
           | otherwise
-          = uf f k
+          = f fixF k
 
 {-# SPECIALIZE tabulateFixBoxedM :: ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera V.Vector a) #-}
 
 -- | Convert a stream back to a function.
 index :: G.Vector v a => Chimera v a -> Word -> a
-index (Chimera vus) 0 = G.unsafeHead (V.unsafeHead vus)
-index (Chimera vus) i = G.unsafeIndex (vus `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `shiftL` sgm)
+index (Chimera vs) 0 = G.unsafeHead (V.unsafeHead vs)
+index (Chimera vs) i = G.unsafeIndex (vs `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `shiftL` sgm)
   where
     sgm :: Int
     sgm = fbs i - 1 - word2int (clz i)
 
 -- | Convert a stream to a list.
 toList :: G.Vector v a => Chimera v a -> [a]
-toList (Chimera vus) = foldMap G.toList vus
+toList (Chimera vs) = foldMap G.toList vs
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b
