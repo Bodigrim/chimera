@@ -69,7 +69,7 @@ bits = fbs (0 :: Word)
 -- The function must be well-defined for any value of argument
 -- and should not return 'error' / 'undefined'.
 tabulate :: G.Vector v a => (Word -> a) -> Chimera v a
-tabulate f = runIdentity $ tabulateM (return . f)
+tabulate f = runIdentity $ tabulateM (pure . f)
 
 -- | Create a stream from the monadic function.
 tabulateM
@@ -80,7 +80,7 @@ tabulateM
 tabulateM f = do
   z  <- f 0
   zs <- V.generateM bits tabulateU
-  return $ Chimera $ G.singleton z `V.cons` zs
+  pure $ Chimera $ G.singleton z `V.cons` zs
   where
     tabulateU :: Int -> m (v a)
     tabulateU i = G.generateM ii (\j -> f (int2word (ii + j)))
@@ -91,7 +91,7 @@ tabulateM f = do
 
 -- | Create a stream from the unfixed function.
 tabulateFix :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
-tabulateFix uf = runIdentity $ tabulateFixM ((return .) . uf . (runIdentity .))
+tabulateFix uf = runIdentity $ tabulateFixM ((pure .) . uf . (runIdentity .))
 
 -- | Create a stream from the unfixed monadic function.
 tabulateFixM
@@ -105,7 +105,7 @@ tabulateFixM uf = bs
     bs = do
       z  <- fix uf 0
       zs <- V.generateM bits tabulateU
-      return $ Chimera $ G.singleton z `V.cons` zs
+      pure $ Chimera $ G.singleton z `V.cons` zs
 
     tabulateU :: Int -> m (v a)
     tabulateU i = vs
@@ -122,7 +122,7 @@ tabulateFixM uf = bs
 
 -- | Create a stream from the unfixed function.
 tabulateFixBoxed :: ((Word -> a) -> Word -> a) -> Chimera V.Vector a
-tabulateFixBoxed uf = runIdentity $ tabulateFixBoxedM ((return .) . uf . (runIdentity .))
+tabulateFixBoxed uf = runIdentity $ tabulateFixBoxedM ((pure .) . uf . (runIdentity .))
 
 -- | Create a stream from the unfixed monadic function.
 tabulateFixBoxedM
@@ -136,7 +136,7 @@ tabulateFixBoxedM uf = bs
     bs = do
       z  <- fix uf 0
       zs <- V.generateM bits tabulateU
-      return $ Chimera $ G.singleton z `V.cons` zs
+      pure $ Chimera $ G.singleton z `V.cons` zs
 
     tabulateU :: Int -> m (V.Vector a)
     tabulateU i = vs
@@ -168,7 +168,7 @@ toList (Chimera vus) = foldMap G.toList vus
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b
-mapWithKey f = runIdentity . traverseWithKey ((return .) . f)
+mapWithKey f = runIdentity . traverseWithKey ((pure .) . f)
 
 -- | Traverse over all indices and respective elements in the stream.
 traverseWithKey
@@ -179,7 +179,7 @@ traverseWithKey
   -> m (Chimera v b)
 traverseWithKey f (Chimera bs) = do
   bs' <- V.imapM g bs
-  return $ Chimera bs'
+  pure $ Chimera bs'
   where
     g :: Int -> v a -> m (v b)
     g 0         = G.imapM (f . int2word)
@@ -196,7 +196,7 @@ zipWithKey
   -> Chimera v a
   -> Chimera v b
   -> Chimera v c
-zipWithKey f = (runIdentity .) . zipWithKeyM (((return .) .) . f)
+zipWithKey f = (runIdentity .) . zipWithKeyM (((pure .) .) . f)
 
 -- | Zip two streams with the monadic function, which is provided with an index and respective elements of both streams.
 zipWithKeyM
@@ -208,7 +208,7 @@ zipWithKeyM
   -> m (Chimera v c)
 zipWithKeyM f (Chimera bs1) (Chimera bs2) = do
   bs' <- V.izipWithM g bs1 bs2
-  return $ Chimera bs'
+  pure $ Chimera bs'
   where
     g :: Int -> v a -> v b -> m (v c)
     g 0         = G.izipWithM (f . int2word)
