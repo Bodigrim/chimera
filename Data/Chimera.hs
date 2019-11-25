@@ -30,6 +30,8 @@ module Data.Chimera
   , tabulateFixBoxedM
 
   , cycle
+  , iterate
+  , iterateM
 
   -- * Manipulation
   , mapWithKey
@@ -38,7 +40,7 @@ module Data.Chimera
   , zipWithKeyM
   ) where
 
-import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle)
+import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate)
 import Control.Applicative
 import Data.Bits
 import Data.Foldable hiding (and, or, toList)
@@ -159,6 +161,24 @@ tabulateFixBoxedM f = result
           = f fixF k
 
 {-# SPECIALIZE tabulateFixBoxedM :: ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera V.Vector a) #-}
+
+-- | 'iterate' @f@ @x@ returns an infinite list of repeated applications of @f@ to @x@.
+iterate :: G.Vector v a => (a -> a) -> a -> Chimera v a
+iterate f = runIdentity . iterateM (pure . f)
+
+iterateM :: forall m v a. (Monad m, G.Vector v a) => (a -> m a) -> a -> m (Chimera v a)
+iterateM f seed = do
+  nextSeed <- f seed
+  let z = G.singleton seed
+  zs <- V.iterateNM bits go (G.singleton nextSeed)
+  pure $ Chimera $ z `V.cons` zs
+  where
+    go :: v a -> m (v a)
+    go vec = do
+      nextSeed <- f (G.unsafeLast vec)
+      G.iterateNM (G.length vec `shiftL` 1) f nextSeed
+
+{-# SPECIALIZE iterateM :: G.Vector v a => (a -> Identity a) -> a -> Identity (Chimera v a) #-}
 
 -- | Convert a stream back to a function.
 index :: G.Vector v a => Chimera v a -> Word -> a

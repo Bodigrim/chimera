@@ -86,6 +86,11 @@ chimeraTests = testGroup "Chimera"
         let f = mkUnfix g in
           fix f jx === Ch.index (Ch.tabulateFixBoxed f :: Ch.Chimera V.Vector Bool) jx
 
+  , QC.testProperty "iterate" $
+    \(Fun _ (f :: Word -> Word)) seed ix ->
+      let jx = ix `mod` 65536 in
+        iterate f seed !! fromIntegral jx === Ch.index (Ch.iterate f seed :: Ch.Chimera U.Vector Word) jx
+
   , QC.testProperty "cycle" $
     \xs ix -> not (null xs) ==>
       let jx = ix `mod` 65536 in
