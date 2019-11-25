@@ -211,17 +211,18 @@ traverseWithKey
   => (Word -> a -> m b)
   -> Chimera v a
   -> m (Chimera v b)
-traverseWithKey f (Chimera bs) = do
-  bs' <- V.imapM g bs
-  pure $ Chimera bs'
-  where
-    g :: Int -> v a -> m (v b)
-    g 0         = G.imapM (f . int2word)
-    g logOffset = G.imapM (f . int2word . (+ offset))
-      where
-        offset = 1 `shiftL` (logOffset - 1)
-
+traverseWithKey f = liftVecUnOpM (\off -> G.imapM (f . (+ off) . int2word))
 {-# SPECIALIZE traverseWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> Identity b) -> Chimera v a -> Identity (Chimera v b) #-}
+
+liftVecUnOpM
+  :: (Monad m, G.Vector v a, G.Vector v b)
+  => (Word -> v a -> m (v b))
+  -> Chimera v a
+  -> m (Chimera v b)
+liftVecUnOpM f (Chimera bs) = Chimera <$> V.imapM g bs
+  where
+    g 0         = f 0
+    g logOffset = f (1 `shiftL` (logOffset - 1))
 
 -- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
 zipWithKey
@@ -240,14 +241,17 @@ zipWithKeyM
   -> Chimera v a
   -> Chimera v b
   -> m (Chimera v c)
-zipWithKeyM f (Chimera bs1) (Chimera bs2) = do
-  bs' <- V.izipWithM g bs1 bs2
-  pure $ Chimera bs'
-  where
-    g :: Int -> v a -> v b -> m (v c)
-    g 0         = G.izipWithM (f . int2word)
-    g logOffset = G.izipWithM (f . int2word . (+ offset))
-      where
-        offset = 1 `shiftL` (logOffset - 1)
+zipWithKeyM f = liftVecBinOpM (\off -> G.izipWithM (f . (+ off) . int2word))
 
 {-# SPECIALIZE zipWithKeyM :: (G.Vector v a, G.Vector v b, G.Vector v c) => (Word -> a -> b -> Identity c) -> Chimera v a -> Chimera v b -> Identity (Chimera v c) #-}
+
+liftVecBinOpM
+  :: (Monad m, G.Vector v a, G.Vector v b, G.Vector v c)
+  => (Word -> v a -> v b -> m (v c))
+  -> Chimera v a
+  -> Chimera v b
+  -> m (Chimera v c)
+liftVecBinOpM f (Chimera bs1) (Chimera bs2) = Chimera <$> V.izipWithM g bs1 bs2
+  where
+    g 0         = f 0
+    g logOffset = f (1 `shiftL` (logOffset - 1))
