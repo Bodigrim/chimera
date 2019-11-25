@@ -17,7 +17,6 @@ module Data.Chimera.Compat
 
 import Data.Bits
 import GHC.Exts
-import GHC.Prim
 import Unsafe.Coerce
 
 #if __GLASGOW_HASKELL__ > 709
