@@ -29,6 +29,8 @@ module Data.Chimera
   , tabulateFixM
   , tabulateFixBoxedM
 
+  , cycle
+
   -- * Manipulation
   , mapWithKey
   , traverseWithKey
@@ -36,7 +38,7 @@ module Data.Chimera
   , zipWithKeyM
   ) where
 
-import Prelude hiding ((^), (*), div, mod, fromIntegral, not, and, or)
+import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle)
 import Control.Applicative
 import Data.Bits
 import Data.Foldable hiding (and, or, toList)
@@ -169,6 +171,14 @@ index (Chimera vs) i = G.unsafeIndex (vs `V.unsafeIndex` (sgm + 1)) (word2int $ 
 -- | Convert a stream to a list.
 toList :: G.Vector v a => Chimera v a -> [a]
 toList (Chimera vs) = foldMap G.toList vs
+
+-- | Return the infinite repetion of the original vector.
+cycle :: G.Vector v a => v a -> Chimera v a
+cycle vec = case l of
+  0 -> error "Data.Chimera.cycle: empty list"
+  _ -> tabulate (G.unsafeIndex vec . word2int . (`rem` l))
+  where
+    l = int2word $ G.length vec
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b

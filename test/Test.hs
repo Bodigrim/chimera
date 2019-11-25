@@ -74,22 +74,33 @@ chimeraTests = testGroup "Chimera"
   [ QC.testProperty "index . tabulate = id" $
     \(Fun _ (f :: Word -> Bool)) ix ->
       let jx = ix `mod` 65536 in
-        f jx === Ch.index (Ch.tabulate f :: Ch.Chimera V.Vector Bool) jx
+        f jx === Ch.index (Ch.tabulate f :: Ch.Chimera U.Vector Bool) jx
   , QC.testProperty "index . tabulateFix = fix" $
     \(Fun _ g) ix ->
       let jx = ix `mod` 65536 in
         let f = mkUnfix g in
-          fix f jx === Ch.index (Ch.tabulateFix f :: Ch.Chimera V.Vector Bool) jx
+          fix f jx === Ch.index (Ch.tabulateFix f :: Ch.Chimera U.Vector Bool) jx
+  , QC.testProperty "index . tabulateFixBoxed = fix" $
+    \(Fun _ g) ix ->
+      let jx = ix `mod` 65536 in
+        let f = mkUnfix g in
+          fix f jx === Ch.index (Ch.tabulateFixBoxed f :: Ch.Chimera V.Vector Bool) jx
+
+  , QC.testProperty "cycle" $
+    \xs ix -> not (null xs) ==>
+      let jx = ix `mod` 65536 in
+        let vs = U.fromList xs :: U.Vector Bool in
+          vs U.! (fromIntegral jx `mod` U.length vs) === Ch.index (Ch.cycle vs) jx
 
   , QC.testProperty "mapWithKey" $
     \(Blind bs) (Fun _ (g :: (Word, Bool) -> Bool)) ix ->
       let jx = ix `mod` 65536 in
-        g (jx, Ch.index bs jx) === Ch.index (Ch.mapWithKey (curry g) bs :: Ch.Chimera V.Vector Bool) jx
+        g (jx, Ch.index bs jx) === Ch.index (Ch.mapWithKey (curry g) bs :: Ch.Chimera U.Vector Bool) jx
 
   , QC.testProperty "zipWithKey" $
     \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Bool, Bool) -> Bool)) ix ->
       let jx = ix `mod` 65536 in
-        g (jx, Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2 :: Ch.Chimera V.Vector Bool) jx
+        g (jx, Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2 :: Ch.Chimera U.Vector Bool) jx
   ]
 
 -------------------------------------------------------------------------------
