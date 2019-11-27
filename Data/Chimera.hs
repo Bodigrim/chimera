@@ -33,6 +33,7 @@ module Data.Chimera
   , cycle
   , iterate
   , iterateM
+  , memoize
 
   -- * Manipulation
   , mapWithKey
@@ -47,6 +48,7 @@ import Data.Bits
 import Data.Foldable hiding (and, or, toList)
 import Data.Function (fix)
 import Data.Functor.Identity
+import Data.Proxy
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
 import Data.Word
@@ -196,6 +198,12 @@ cycle vec = case l of
 
 drop :: G.Vector v a => Word -> Chimera v a -> Chimera v a
 drop n ch = tabulate (index ch . (+ n))
+
+memoize :: forall v a. G.Vector v a => Proxy v -> (Word -> a) -> (Word -> a)
+memoize _ f = index ch
+  where
+    ch :: Chimera v a
+    ch = tabulate f
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b
