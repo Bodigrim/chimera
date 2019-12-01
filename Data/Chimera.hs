@@ -18,27 +18,32 @@
 
 module Data.Chimera
   ( Chimera
-  , index
-  , toList
+  , memoize
 
   -- * Construction
   , tabulate
   , tabulateFix
   , tabulateFixBoxed
+  , iterate
+  , cycle
+
+  -- * Elimination
+  , index
+  , toList
+
+  -- * Monadic construction
   , tabulateM
   , tabulateFixM
   , tabulateFixBoxedM
-
-  , drop
-  , cycle
-  , iterate
   , iterateM
-  , memoize
 
   -- * Manipulation
+  , drop
   , mapWithKey
-  , traverseWithKey
   , zipWithKey
+
+  -- * Monadic manipulation
+  , traverseWithKey
   , zipWithKeyM
   ) where
 
