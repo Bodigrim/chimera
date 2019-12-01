@@ -64,6 +64,10 @@
 -- >   | n `gcd` 30 /= 1    = False
 -- >   | otherwise          = index isPrimeBS30 (toWheel30 n)
 
+{-# LANGUAGE BangPatterns  #-}
+{-# LANGUAGE MagicHash     #-}
+{-# LANGUAGE UnboxedTuples #-}
+
 module Data.Chimera.WheelMapping
   ( fromWheel2
   , toWheel2
@@ -76,11 +80,16 @@ module Data.Chimera.WheelMapping
   ) where
 
 import Data.Bits
+import Data.Chimera.Compat
 import Data.Primitive.ByteArray
 import Data.Word
+import GHC.Exts
 
 word2int :: Word -> Int
 word2int = fromIntegral
+
+bits :: Int
+bits = fbs (0 :: Word)
 
 -- | Left inverse for 'fromWheel2'. Monotonically non-decreasing function.
 --
@@ -104,7 +113,13 @@ fromWheel2 i = i `shiftL` 1 + 1
 --
 -- prop> toWheel6 . fromWheel6 == id
 toWheel6 :: Word -> Word
-toWheel6 i = i `quot` 3
+toWheel6 i@(W# i#) = case bits of
+  64 -> W# z1# `shiftR` 1
+  _  -> i `quot` 3
+  where
+    m# = 12297829382473034411## -- (2^65+1) / 3
+    !(# z1#, _ #) = timesWord2# m# i#
+
 {-# INLINE toWheel6 #-}
 
 -- | 'fromWheel6' n is the (n+1)-th positive number, not divisible by 2 or 3.
@@ -122,9 +137,17 @@ fromWheel6 i = i `shiftL` 1 + i + (i .&. 1) + 1
 --
 -- prop> toWheel30 . fromWheel30 == id
 toWheel30 :: Word -> Word
-toWheel30 i = q `shiftL` 3 + (r + r `shiftR` 4) `shiftR` 2
+toWheel30 i@(W# i#) = q `shiftL` 3 + (r + r `shiftR` 4) `shiftR` 2
   where
-    (q, r) = i `quotRem` 30
+    (q, r) = case bits of
+      64 -> (q64, r64)
+      _  -> i `quotRem` 30
+
+    m# = 9838263505978427529## -- (2^67+7) / 15
+    !(# z1#, _ #) = timesWord2# m# i#
+    q64 = W# z1# `shiftR` 4
+    r64 = i - q64 `shiftL` 5 + q64 `shiftL` 1
+
 {-# INLINE toWheel30 #-}
 
 -- | 'fromWheel30' n is the (n+1)-th positive number, not divisible by 2, 3 or 5.
@@ -143,9 +166,17 @@ fromWheel30 i = ((i `shiftL` 2 - i `shiftR` 2) .|. 1)
 --
 -- prop> toWheel210 . fromWheel210 == id
 toWheel210 :: Word -> Word
-toWheel210 i = q * 48 + fromIntegral (toWheel210Table `indexByteArray` word2int r :: Word8)
+toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + fromIntegral (toWheel210Table `indexByteArray` word2int r :: Word8)
   where
-    (q, r) = i `quotRem` 210
+    (q, r) = case bits of
+      64 -> (q64, r64)
+      _  -> i `quotRem` 210
+
+    m# = 5621864860559101445## -- (2^69+13) / 105
+    !(# z1#, _ #) = timesWord2# m# i#
+    q64 = W# z1# `shiftR` 6
+    r64 = i - q64 * 210
+
 {-# INLINE toWheel210 #-}
 
 toWheel210Table :: ByteArray
@@ -159,9 +190,17 @@ toWheel210Table = byteArrayFromList ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 
 -- > > map fromWheel210 [0..9]
 -- > [1,11,13,17,19,23,29,31,37,41]
 fromWheel210 :: Word -> Word
-fromWheel210 i = q * 210 + fromIntegral (fromWheel210Table `indexByteArray` word2int r :: Word8)
+fromWheel210 i@(W# i#) = q * 210 + fromIntegral (fromWheel210Table `indexByteArray` word2int r :: Word8)
   where
-    (q, r) = i `quotRem` 48
+    (q, r) = case bits of
+      64 -> (q64, r64)
+      _  -> i `quotRem` 48
+
+    m# = 12297829382473034411## -- (2^65+1) / 3
+    !(# z1#, _ #) = timesWord2# m# i#
+    q64 = W# z1# `shiftR` 5
+    r64 = i - q64 `shiftL` 5 - q64 `shiftL` 4
+
 {-# INLINE fromWheel210 #-}
 
 fromWheel210Table :: ByteArray
