@@ -45,6 +45,8 @@ module Data.Chimera
   -- * Monadic manipulation
   , traverseWithKey
   , zipWithKeyM
+
+  , convert
   ) where
 
 import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
@@ -265,3 +267,10 @@ liftVecBinOpM f (Chimera bs1) (Chimera bs2) = Chimera <$> V.izipWithM g bs1 bs2
   where
     g 0         = f 0
     g logOffset = f (1 `shiftL` (logOffset - 1))
+
+-- | Convert underlying vector type.
+convert
+  :: (G.Vector v a, G.Vector w a)
+  => Chimera v a
+  -> Chimera w a
+convert (Chimera bs) = Chimera (V.map G.convert bs)
