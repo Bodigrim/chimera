@@ -46,7 +46,12 @@ module Data.Chimera
   , traverseWithKey
   , zipWithKeyM
 
+  -- * Interaction with subvectors
   , convert
+  , liftUnOp
+  , liftUnOpM
+  , liftBinOp
+  , liftBinOpM
   ) where
 
 import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
@@ -223,18 +228,27 @@ traverseWithKey
   => (Word -> a -> m b)
   -> Chimera v a
   -> m (Chimera v b)
-traverseWithKey f = liftVecUnOpM (\off -> G.imapM (f . (+ off) . int2word))
+traverseWithKey f = liftUnOpM (\off -> G.imapM (f . (+ off) . int2word))
 {-# SPECIALIZE traverseWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> Identity b) -> Chimera v a -> Identity (Chimera v b) #-}
 
-liftVecUnOpM
-  :: (Monad m, G.Vector v a, G.Vector v b)
-  => (Word -> v a -> m (v b))
+liftUnOp
+  :: (G.Vector v a, G.Vector w b)
+  => (Word -> v a -> w b)
   -> Chimera v a
-  -> m (Chimera v b)
-liftVecUnOpM f (Chimera bs) = Chimera <$> V.imapM g bs
+  -> Chimera w b
+liftUnOp f = runIdentity . liftUnOpM ((pure .) . f)
+
+liftUnOpM
+  :: (Monad m, G.Vector v a, G.Vector w b)
+  => (Word -> v a -> m (w b))
+  -> Chimera v a
+  -> m (Chimera w b)
+liftUnOpM f (Chimera bs) = Chimera <$> V.imapM g bs
   where
     g 0         = f 0
     g logOffset = f (1 `shiftL` (logOffset - 1))
+
+{-# SPECIALIZE liftUnOpM :: (G.Vector v a, G.Vector w b) => (Word -> v a -> Identity (w b)) -> Chimera v a -> Identity (Chimera w b) #-}
 
 -- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
 zipWithKey
@@ -253,20 +267,30 @@ zipWithKeyM
   -> Chimera v a
   -> Chimera v b
   -> m (Chimera v c)
-zipWithKeyM f = liftVecBinOpM (\off -> G.izipWithM (f . (+ off) . int2word))
+zipWithKeyM f = liftBinOpM (\off -> G.izipWithM (f . (+ off) . int2word))
 
 {-# SPECIALIZE zipWithKeyM :: (G.Vector v a, G.Vector v b, G.Vector v c) => (Word -> a -> b -> Identity c) -> Chimera v a -> Chimera v b -> Identity (Chimera v c) #-}
 
-liftVecBinOpM
-  :: (Monad m, G.Vector v a, G.Vector v b, G.Vector v c)
-  => (Word -> v a -> v b -> m (v c))
-  -> Chimera v a
+liftBinOp
+  :: (G.Vector u a, G.Vector v b, G.Vector w c)
+  => (Word -> u a -> v b -> w c)
+  -> Chimera u a
   -> Chimera v b
-  -> m (Chimera v c)
-liftVecBinOpM f (Chimera bs1) (Chimera bs2) = Chimera <$> V.izipWithM g bs1 bs2
+  -> Chimera w c
+liftBinOp f = (runIdentity .) . liftBinOpM (((pure .) .) . f)
+
+liftBinOpM
+  :: (Monad m, G.Vector u a, G.Vector v b, G.Vector w c)
+  => (Word -> u a -> v b -> m (w c))
+  -> Chimera u a
+  -> Chimera v b
+  -> m (Chimera w c)
+liftBinOpM f (Chimera bs1) (Chimera bs2) = Chimera <$> V.izipWithM g bs1 bs2
   where
     g 0         = f 0
     g logOffset = f (1 `shiftL` (logOffset - 1))
+
+{-# SPECIALIZE liftBinOpM :: (G.Vector u a, G.Vector v b, G.Vector w c) => (Word -> u a -> v b -> Identity (w c)) -> Chimera u a -> Chimera v b -> Identity (Chimera w c) #-}
 
 -- | Convert underlying vector type.
 convert
