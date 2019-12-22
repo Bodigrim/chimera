@@ -23,7 +23,6 @@ module Data.Chimera
   -- * Construction
   , tabulate
   , tabulateFix
-  , tabulateFixBoxed
   , iterate
   , cycle
 
@@ -34,7 +33,6 @@ module Data.Chimera
   -- * Monadic construction
   , tabulateM
   , tabulateFixM
-  , tabulateFixBoxedM
   , iterateM
 
   -- * Manipulation
@@ -143,35 +141,6 @@ tabulateFixM f = result
           = f fixF k
 
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
-
--- | Create a stream from the unfixed function.
-tabulateFixBoxed :: ((Word -> a) -> Word -> a) -> Chimera V.Vector a
-tabulateFixBoxed uf = runIdentity $ tabulateFixBoxedM ((pure .) . uf . (runIdentity .))
-
--- | Create a stream from the unfixed monadic function.
-tabulateFixBoxedM
-  :: forall m a.
-     Monad m
-  => ((Word -> m a) -> Word -> m a)
-  -> m (Chimera V.Vector a)
-tabulateFixBoxedM f = result
-  where
-    result :: m (Chimera V.Vector a)
-    result = do
-      z  <- fix f 0
-      zs <- V.generateM bits tabulateSubVector
-      pure $ Chimera $ G.singleton z `V.cons` zs
-
-    tabulateSubVector :: Int -> m (V.Vector a)
-    tabulateSubVector i = subResult
-      where
-        subResult = G.generateM ii (\j -> f fixF (int2word (ii + j)))
-        ii = 1 `shiftL` i
-
-    fixF :: Word -> m a
-    fixF k = flip index k <$> result
-
-{-# SPECIALIZE tabulateFixBoxedM :: ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera V.Vector a) #-}
 
 -- | 'iterate' @f@ @x@ returns an infinite list of repeated applications of @f@ to @x@.
 iterate :: G.Vector v a => (a -> a) -> a -> Chimera v a
