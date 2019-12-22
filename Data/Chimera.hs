@@ -129,13 +129,16 @@ tabulateFixM f = result
     tabulateSubVector :: Int -> m (v a)
     tabulateSubVector i = subResult
       where
-        subResult = G.generateM ii (\j -> f fixF (int2word (ii + j)))
+        subResult      = G.generateM ii (\j -> f fixF (int2word (ii + j)))
+        subResultBoxed = V.generateM ii (\j -> f fixF (int2word (ii + j)))
         ii = 1 `shiftL` i
 
         fixF :: Word -> m a
         fixF k
           | k < int2word ii
           = flip index k <$> result
+          | k < int2word ii `shiftL` 1
+          = (`V.unsafeIndex` (word2int k - ii)) <$> subResultBoxed
           | otherwise
           = f fixF k
 
