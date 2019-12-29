@@ -4,13 +4,15 @@ cabal-version: >=1.10
 build-type: Simple
 license: BSD3
 license-file: LICENSE
-copyright: 2017-2018 Bodigrim
+copyright: 2017-2019 Bodigrim
 maintainer: andrew.lelechenko@gmail.com
 homepage: https://github.com/Bodigrim/chimera#readme
+category: Data
 synopsis: Lazy, infinite streams with O(1) indexing.
 author: Bodigrim
 extra-source-files:
   README.md
+tested-with: GHC==8.8.1, GHC==8.6.5, GHC==8.4.4, GHC==8.2.2, GHC==8.0.2
 
 source-repository head
   type: git
@@ -18,11 +20,8 @@ source-repository head
 
 library
   build-depends:
-    base >=4.5 && <5,
+    base >=4.9 && <5,
     vector
-  if impl(ghc <7.10)
-    build-depends:
-      transformers -any
   exposed-modules:
     Data.Chimera
     Data.Chimera.ContinuousMapping
@@ -31,20 +30,20 @@ library
     Data.Chimera.Compat
     Data.Chimera.FromIntegral
   default-language: Haskell2010
-  ghc-options: -Wall -O2
+  ghc-options: -Wall
 
 test-suite test
   build-depends:
     base >=4.5 && <5,
-    chimera -any,
+    chimera,
     QuickCheck >=2.10,
-    tasty -any,
-    tasty-hunit -any,
-    tasty-quickcheck -any,
-    tasty-smallcheck -any,
-    vector -any
+    tasty,
+    tasty-hunit,
+    tasty-quickcheck,
+    tasty-smallcheck,
+    vector
   type: exitcode-stdio-1.0
   main-is: Test.hs
   default-language: Haskell2010
   hs-source-dirs: test
-  ghc-options: -Wall -O2
+  ghc-options: -Wall
