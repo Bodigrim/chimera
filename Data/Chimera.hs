@@ -1,10 +1,10 @@
 -- |
 -- Module:      Data.Chimera
--- Copyright:   (c) 2018 Andrew Lelechenko
+-- Copyright:   (c) 2018-2019 Andrew Lelechenko
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
--- Lazy, infinite stream with O(1) indexing.
+-- Lazy, infinite streams with O(1) indexing.
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveFoldable      #-}
@@ -13,12 +13,19 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
 module Data.Chimera
-  ( Chimera
-  , memoize
+  ( -- * Memoization
+    memoize
+  , memoizeFix
+
+  -- * Chimera
+  , Chimera
+  , VChimera
+  , UChimera
 
   -- * Construction
   , tabulate
@@ -31,6 +38,7 @@ module Data.Chimera
   , toList
 
   -- * Monadic construction
+  -- $monadic
   , tabulateM
   , tabulateFixM
   , iterateM
@@ -41,6 +49,7 @@ module Data.Chimera
   , zipWithKey
 
   -- * Monadic manipulation
+  -- $monadic
   , traverseWithKey
   , zipWithKeyM
 
@@ -61,17 +70,32 @@ import Data.Functor.Identity
 import Data.Proxy
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
+import qualified Data.Vector.Unboxed as U
 import Data.Word
 
 import Data.Chimera.Compat
 import Data.Chimera.FromIntegral
 
--- | Representation of a lazy infinite stream, offering
--- indexing via 'index' in constant time.
+-- $monadic
+-- Be careful: the stream is infinite, so
+-- monadic effects must be lazy
+-- in order to be executed in a finite time.
+
+-- | Lazy infinite streams with elements from @a@,
+-- backed by a 'G.Vector' @v@ (boxed, unboxed, storable, etc.).
+-- Use 'tabulate', 'tabulateFix', etc. to create a stream
+-- and 'index' to access its arbitrary elements
+-- in (amortized) constant time.
 newtype Chimera v a = Chimera { _unChimera :: V.Vector (v a) }
   deriving (Functor, Foldable, Traversable)
 
--- | Similar to 'ZipList'.
+-- | Streams backed by boxed vectors.
+type VChimera = Chimera V.Vector
+
+-- | Streams backed by unboxed vectors.
+type UChimera = Chimera U.Vector
+
+-- | 'pure' creates a constant stream.
 instance Applicative (Chimera V.Vector) where
   pure   = tabulate   . const
   (<*>)  = zipWithKey (const ($))
@@ -82,13 +106,18 @@ instance Applicative (Chimera V.Vector) where
 bits :: Int
 bits = fbs (0 :: Word)
 
--- | Create a stream from the function.
--- The function must be well-defined for any value of argument
--- and should not return 'error' / 'undefined'.
+-- | Create a stream of values of a given function.
+-- Once created it can be accessed via 'index' or 'toList'.
+--
+-- >>> ch = tabulate (^ 2) :: UChimera Word
+-- >>> index ch 9
+-- 81
+-- >>> take 10 (toList ch)
+-- [0,1,4,9,16,25,36,49,64,81]
 tabulate :: G.Vector v a => (Word -> a) -> Chimera v a
 tabulate f = runIdentity $ tabulateM (pure . f)
 
--- | Create a stream from the monadic function.
+-- | Create a stream of values of a given monadic function.
 tabulateM
   :: forall m v a.
      (Monad m, G.Vector v a)
@@ -106,7 +135,26 @@ tabulateM f = do
 
 {-# SPECIALIZE tabulateM :: G.Vector v a => (Word -> Identity a) -> Identity (Chimera v a) #-}
 
--- | Create a stream from the unfixed function.
+-- | For a given @f@ create a stream of values of a recursive function 'fix' @f@.
+-- Once created it can be accessed via 'index' or 'toList'.
+--
+-- For example, imagine that we want to tabulate
+-- <https://en.wikipedia.org/wiki/Catalan_number Catalan numbers>:
+--
+-- >>> catalan n = if n == 0 then 1 else sum [ catalan i * catalan (n - 1 - i) | i <- [0 .. n - 1] ]
+--
+-- Can we find @catalanF@ such that @catalan@ = 'fix' @catalanF@?
+-- Just replace all recursive calls to @catalan@ by @f@:
+--
+-- >>> catalanF f n = if n == 0 then 1 else sum [ f i * f (n - 1 - i) | i <- [0 .. n - 1] ]
+--
+-- Now we are ready to use 'tabulateFix':
+--
+-- >>> ch = tabulateFix catalanF :: VChimera Integer
+-- >>> index ch 9
+-- 4862
+-- >>> take 10 (toList ch)
+-- [1,1,2,5,14,42,132,429,1430,4862]
 tabulateFix :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix uf = runIdentity $ tabulateFixM ((pure .) . uf . (runIdentity .))
 
@@ -143,6 +191,10 @@ tabulateFixM f = result
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
 -- | 'iterate' @f@ @x@ returns an infinite list of repeated applications of @f@ to @x@.
+--
+-- >>> ch = iterate (+ 1) 0 :: UChimera Int
+-- >>> take 10 (toList ch)
+-- [0,1,2,3,4,5,6,7,8,9]
 iterate :: G.Vector v a => (a -> a) -> a -> Chimera v a
 iterate f = runIdentity . iterateM (pure . f)
 
@@ -172,7 +224,12 @@ index (Chimera vs) i = G.unsafeIndex (vs `V.unsafeIndex` (sgm + 1)) (word2int $ 
 toList :: G.Vector v a => Chimera v a -> [a]
 toList (Chimera vs) = foldMap G.toList vs
 
--- | Return the infinite repetion of the original vector.
+-- | Return an infinite repetion of a given vector.
+-- Throw an error on an empty vector.
+--
+-- >>> ch = cycle (Data.Vector.fromList [4, 2]) :: VChimera Int
+-- >>> take 10 (toList ch)
+-- [4,2,4,2,4,2,4,2,4,2]
 cycle :: G.Vector v a => v a -> Chimera v a
 cycle vec = case l of
   0 -> error "Data.Chimera.cycle: empty list"
@@ -183,11 +240,40 @@ cycle vec = case l of
 drop :: G.Vector v a => Word -> Chimera v a -> Chimera v a
 drop n ch = tabulate (index ch . (+ n))
 
-memoize :: forall v a. G.Vector v a => Proxy v -> (Word -> a) -> (Word -> a)
-memoize _ f = index ch
-  where
-    ch :: Chimera v a
-    ch = tabulate f
+-- | Memoize a function:
+-- repeating calls to 'memoize' @f@ @n@
+-- would compute @f@ @n@ only once
+-- and cache the result in 'VChimera'.
+-- This is just a shortcut for 'index' '.' 'tabulate'.
+--
+-- prop> memoize f n = f n
+memoize :: (Word -> a) -> (Word -> a)
+memoize = index @V.Vector . tabulate
+
+-- | For a given @f@ memoize a recursive function 'fix' @f@,
+-- caching results in 'VChimera'.
+-- This is just a shortcut for 'index' '.' 'tabulateFix'.
+--
+-- prop> memoizeFix f n = fix f n
+--
+-- For example, imagine that we want to memoize
+-- <https://en.wikipedia.org/wiki/Fibonacci_number Fibonacci numbers>:
+--
+-- >>> fibo n = if n < 2 then fromIntegral n else fibo (n - 1) + fibo (n - 2)
+--
+-- Can we find @fiboF@ such that @fibo@ = 'fix' @fiboF@?
+-- Just replace all recursive calls to @fibo@ by @f@:
+--
+-- >>> fiboF f n = if n < 2 then fromIntegral n else f (n - 1) + f (n - 2)
+--
+-- Now we are ready to use 'memoizeFix':
+--
+-- >>> memoizeFix fiboF 10
+-- 55
+-- >>> memoizeFix fiboF 100
+-- 354224848179261915075
+memoizeFix :: ((Word -> a) -> Word -> a) -> (Word -> a)
+memoizeFix = index @V.Vector . tabulateFix
 
 -- | Map over all indices and respective elements in the stream.
 mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b
