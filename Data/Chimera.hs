@@ -44,6 +44,7 @@ module Data.Chimera
   , iterateM
 
   -- * Interaction with subvectors
+  -- $subvectors
   , liftUnOp
   , liftUnOpM
   , liftBinOp
@@ -69,12 +70,28 @@ import Data.Chimera.FromIntegral
 -- Be careful: the stream is infinite, so
 -- monadic effects must be lazy
 -- in order to be executed in a finite time.
+--
+-- For instance, lazy state monad works fine:
+--
+-- >>> import Control.Monad.State.Lazy
+-- >>> ch = evalState (tabulateM (\i -> do modify (+ i); get)) 0 :: UChimera Word
+-- >>> take 10 (toList ch)
+-- [0,1,3,6,10,15,21,28,36,45]
+--
+-- But the same computation in the strict state
+-- monad "Control.Monad.State.Strict" diverges.
+
+-- $subvectors
+-- Internally 'Chimera' consists of a number of subvectors.
+-- Following functions provide a low-level access to them.
+-- This ability is especially important for streams of booleans,
+-- allowing to operate on subvectors in bulk.
 
 -- | Lazy infinite streams with elements from @a@,
 -- backed by a 'G.Vector' @v@ (boxed, unboxed, storable, etc.).
 -- Use 'tabulate', 'tabulateFix', etc. to create a stream
 -- and 'index' to access its arbitrary elements
--- in (amortized) constant time.
+-- in constant time.
 newtype Chimera v a = Chimera { _unChimera :: V.Vector (v a) }
   deriving (Functor, Foldable, Traversable)
 
@@ -106,7 +123,7 @@ bits = fbs (0 :: Word)
 tabulate :: G.Vector v a => (Word -> a) -> Chimera v a
 tabulate f = runIdentity $ tabulateM (pure . f)
 
--- | Create a stream of values of a given monadic function.
+-- | Monadic version of 'tabulate'.
 tabulateM
   :: forall m v a.
      (Monad m, G.Vector v a)
@@ -133,7 +150,7 @@ tabulateM f = do
 -- >>> catalan n = if n == 0 then 1 else sum [ catalan i * catalan (n - 1 - i) | i <- [0 .. n - 1] ]
 --
 -- Can we find @catalanF@ such that @catalan@ = 'fix' @catalanF@?
--- Just replace all recursive calls to @catalan@ by @f@:
+-- Just replace all recursive calls to @catalan@ with @f@:
 --
 -- >>> catalanF f n = if n == 0 then 1 else sum [ f i * f (n - 1 - i) | i <- [0 .. n - 1] ]
 --
@@ -147,7 +164,10 @@ tabulateM f = do
 tabulateFix :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix uf = runIdentity $ tabulateFixM ((pure .) . uf . (runIdentity .))
 
--- | Create a stream from the unfixed monadic function.
+-- | Monadic version of 'tabulateFix'.
+-- There are no particular guarantees about the order of recursive calls:
+-- they may be executed more than once or executed in different order.
+-- That said, monadic effects must be idempotent and commutative.
 tabulateFixM
   :: forall m v a.
      (Monad m, G.Vector v a)
@@ -179,7 +199,8 @@ tabulateFixM f = result
 
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
--- | 'iterate' @f@ @x@ returns an infinite list of repeated applications of @f@ to @x@.
+-- | 'iterate' @f@ @x@ returns an infinite stream
+-- of repeated applications of @f@ to @x@.
 --
 -- >>> ch = iterate (+ 1) 0 :: UChimera Int
 -- >>> take 10 (toList ch)
@@ -187,6 +208,7 @@ tabulateFixM f = result
 iterate :: G.Vector v a => (a -> a) -> a -> Chimera v a
 iterate f = runIdentity . iterateM (pure . f)
 
+-- | Monadic version of 'iterate'.
 iterateM :: forall m v a. (Monad m, G.Vector v a) => (a -> m a) -> a -> m (Chimera v a)
 iterateM f seed = do
   nextSeed <- f seed
@@ -201,7 +223,11 @@ iterateM f seed = do
 
 {-# SPECIALIZE iterateM :: G.Vector v a => (a -> Identity a) -> a -> Identity (Chimera v a) #-}
 
--- | Convert a stream back to a function.
+-- | Index a stream in a constant time.
+--
+-- >>> ch = tabulate (^ 2) :: UChimera Word
+-- >>> index ch 9
+-- 81
 index :: G.Vector v a => Chimera v a -> Word -> a
 index (Chimera vs) 0 = G.unsafeHead (V.unsafeHead vs)
 index (Chimera vs) i = G.unsafeIndex (vs `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `shiftL` sgm)
@@ -209,7 +235,11 @@ index (Chimera vs) i = G.unsafeIndex (vs `V.unsafeIndex` (sgm + 1)) (word2int $ 
     sgm :: Int
     sgm = fbs i - 1 - word2int (clz i)
 
--- | Convert a stream to a list.
+-- | Convert a stream to an infinite list.
+--
+-- >>> ch = tabulate (^ 2) :: UChimera Word
+-- >>> take 10 (toList ch)
+-- [0,1,4,9,16,25,36,49,64,81]
 toList :: G.Vector v a => Chimera v a -> [a]
 toList (Chimera vs) = foldMap G.toList vs
 
@@ -248,7 +278,7 @@ memoize = index @V.Vector . tabulate
 -- >>> fibo n = if n < 2 then fromIntegral n else fibo (n - 1) + fibo (n - 2)
 --
 -- Can we find @fiboF@ such that @fibo@ = 'fix' @fiboF@?
--- Just replace all recursive calls to @fibo@ by @f@:
+-- Just replace all recursive calls to @fibo@ with @f@:
 --
 -- >>> fiboF f n = if n < 2 then fromIntegral n else f (n - 1) + f (n - 2)
 --
