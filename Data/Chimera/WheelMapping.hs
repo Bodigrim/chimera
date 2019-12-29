@@ -5,64 +5,65 @@
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
 -- Helpers for mapping to <http://mathworld.wolfram.com/RoughNumber.html rough numbers>
--- and back. Mostly useful in number theory.
+-- and back. This has various applications in number theory.
 --
 -- __Example__
 --
--- Let 'isPrime' be an expensive predicate, which checks whether its
--- argument is a prime number. We can improve performance of repetitive reevaluation by memoization:
+-- Let @isPrime@ be an expensive predicate,
+-- which checks whether its argument is a prime number.
+-- We can memoize it as usual:
 --
--- > isPrimeBS :: Chimera
--- > isPrimeBS = tabulate isPrime
+-- > isPrimeCache1 :: UChimera Bool
+-- > isPrimeCache1 = tabulate isPrime
 -- >
--- > isPrime' :: Word -> Bool
--- > isPrime' = index isPrimeBS
+-- > isPrime1 :: Word -> Bool
+-- > isPrime1 = index isPrimeCache1
 --
--- However, it is well-known that the only even prime is 2.
--- So we can save half of space by memoizing the predicate for odd
+-- But one may argue that since the only even prime number is 2,
+-- it is quite wasteful to cache @isPrime@ for even arguments.
+-- So we can save half the space by memoizing it for odd
 -- numbers only:
 --
--- > isPrimeBS2 :: Chimera
--- > isPrimeBS2 = tabulate (\n -> isPrime (2 * n + 1))
+-- > isPrimeCache2 :: UChimera Bool
+-- > isPrimeCache2 = tabulate (isPrime . (\n -> 2 * n + 1))
 -- >
--- > isPrime2' :: Word -> Bool
--- > isPrime2' n
+-- > isPrime2 :: Word -> Bool
+-- > isPrime2 n
 -- >   | n == 2    = True
 -- >   | even n    = False
--- >   | otherwise = index isPrimeBS2 ((n - 1) `quot` 2)
+-- >   | otherwise = index isPrimeCache2 ((n - 1) `quot` 2)
 --
--- or, using 'fromWheel2' and 'toWheel2',
+-- Here @\\n -> 2 * n + 1@ maps n to the (n+1)-th odd number,
+-- and @\\n -> (n - 1) \`quot\` 2@ takes it back. These functions
+-- are available below as 'fromWheel2' and 'toWheel2'.
 --
--- > isPrimeBS2 :: Chimera
--- > isPrimeBS2 = tabulate (isPrime . fromWheel2)
+-- Odd numbers are the simplest example of numbers, lacking
+-- small prime factors (so called
+-- <http://mathworld.wolfram.com/RoughNumber.html rough numbers>).
+-- Removing numbers, having small prime factors, is sometimes
+-- called <https://en.wikipedia.org/wiki/Wheel_factorization wheel sieving>.
+--
+-- One can go further and exclude not only even numbers,
+-- but also integers, divisible by 3.
+-- To do this we need a function which maps n to the (n+1)-th number coprime with 2 and 3
+-- (thus, with 6) and its inverse: namely, 'fromWheel6' and 'toWheel6'. Then write
+--
+-- > isPrimeCache6 :: UChimera Bool
+-- > isPrimeCache6 = tabulate (isPrime . fromWheel6)
 -- >
--- > isPrime2' :: Word -> Bool
--- > isPrime2' n
--- >   | n == 2    = True
--- >   | even n    = False
--- >   | otherwise = index isPrimeBS2 (toWheel2 n)
---
--- Well, we also know that all primes, except 2 and 3, are coprime to 6; and all primes, except 2, 3 and 5, are coprime 30. So we can save even more space by writing
---
--- > isPrimeBS6 :: Chimera
--- > isPrimeBS6 = tabulate (isPrime . fromWheel6)
--- >
--- > isPrime6' :: Word -> Bool
--- > isPrime6' n
+-- > isPrime6 :: Word -> Bool
+-- > isPrime6 n
 -- >   | n `elem` [2, 3] = True
 -- >   | n `gcd` 6 /= 1  = False
--- >   | otherwise       = index isPrimeBS6 (toWheel6 n)
+-- >   | otherwise       = index isPrimeCache6 (toWheel6 n)
 --
--- or
+-- Thus, the wheel of 6 saves more space, improving memory locality.
 --
--- > isPrimeBS30 :: Chimera
--- > isPrimeBS30 = tabulate (isPrime . fromWheel30)
--- >
--- > isPrime30' :: Word -> Bool
--- > isPrime30' n
--- >   | n `elem` [2, 3, 5] = True
--- >   | n `gcd` 30 /= 1    = False
--- >   | otherwise          = index isPrimeBS30 (toWheel30 n)
+-- (If you need to reduce memory consumption even further,
+-- consider using 'Data.Bit.Bit' wrapper,
+-- which provides an instance of unboxed vector,
+-- packing one boolean per bit instead of one boolean per byte for 'Bool')
+--
 
 {-# LANGUAGE BangPatterns  #-}
 {-# LANGUAGE MagicHash     #-}
@@ -98,8 +99,8 @@ toWheel2 i = i `shiftR` 1
 --
 -- prop> map fromWheel2 [0..] == [ n | n <- [0..], n `gcd` 2 == 1 ]
 --
--- > > map fromWheel2 [0..9]
--- > [1,3,5,7,9,11,13,15,17,19]
+-- >>> map fromWheel2 [0..9]
+-- [1,3,5,7,9,11,13,15,17,19]
 fromWheel2 :: Word -> Word
 fromWheel2 i = i `shiftL` 1 + 1
 {-# INLINE fromWheel2 #-}
@@ -122,8 +123,8 @@ toWheel6 i@(W# i#) = case bits of
 --
 -- prop> map fromWheel6 [0..] == [ n | n <- [0..], n `gcd` 6 == 1 ]
 --
--- > > map fromWheel6 [0..9]
--- > [1,5,7,11,13,17,19,23,25,29]
+-- >>> map fromWheel6 [0..9]
+-- [1,5,7,11,13,17,19,23,25,29]
 fromWheel6 :: Word -> Word
 fromWheel6 i = i `shiftL` 1 + i + (i .&. 1) + 1
 {-# INLINE fromWheel6 #-}
@@ -150,8 +151,8 @@ toWheel30 i@(W# i#) = q `shiftL` 3 + (r + r `shiftR` 4) `shiftR` 2
 --
 -- prop> map fromWheel30 [0..] == [ n | n <- [0..], n `gcd` 30 == 1 ]
 --
--- > > map fromWheel30 [0..9]
--- > [1,7,11,13,17,19,23,29,31,37]
+-- >>> map fromWheel30 [0..9]
+-- [1,7,11,13,17,19,23,29,31,37]
 fromWheel30 :: Word -> Word
 fromWheel30 i = ((i `shiftL` 2 - i `shiftR` 2) .|. 1)
               + ((i `shiftL` 1 - i `shiftR` 1) .&. 2)
@@ -183,8 +184,8 @@ toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + W# (indexWord8OffAddr# tabl
 --
 -- prop> map fromWheel210 [0..] == [ n | n <- [0..], n `gcd` 210 == 1 ]
 --
--- > > map fromWheel210 [0..9]
--- > [1,11,13,17,19,23,29,31,37,41]
+-- >>> map fromWheel210 [0..9]
+-- [1,11,13,17,19,23,29,31,37,41]
 fromWheel210 :: Word -> Word
 fromWheel210 i@(W# i#) = q * 210 + W# (indexWord8OffAddr# table# (word2Int# r#))
   where

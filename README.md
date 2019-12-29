@@ -1,81 +1,97 @@
 # chimera
 
-Lazy, infinite streams with O(1) indexing.
-Most useful to memoize functions.
+Lazy infinite compact streams with cache-friendly O(1) indexing
+and applications for memoization.
+
+----
+
+Imagine having a function `f :: Word -> a`,
+which is expensive to evaluate. We would like to _memoize_ it,
+returning `g :: Word -> a`, which does effectively the same,
+but transparently caches results to speed up repetitive
+re-evaluation.
+
+There are plenty of memoizing libraries on Hackage, but they
+usually fall into two categories:
+
+* Store cache as a flat array, enabling us
+  to obtain cached values in O(1) time, which is nice.
+  The drawback is that one must specify the size
+  of the array beforehand,
+  limiting an interval of inputs,
+  and actually allocate it at once.
+
+* Store cache as a lazy binary tree.
+  Thanks to laziness, one can freely use the full range of inputs.
+  The drawback is that obtaining values from a tree
+  takes logarithmic time and is unfriendly to CPU cache,
+  which kinda defeats the purpose.
+
+This package intends to tackle both issues,
+providing a data type `Chimera` for
+lazy infinite compact streams with cache-friendly O(1) indexing.
+
+Additional features include:
+
+* memoization of recursive functions and recurrent sequences,
+* memoization of functions of several, possibly signed arguments,
+* efficient memoization of boolean predicates.
 
 ## Example 1
 
-Consider following predicate:
+Consider the following predicate:
 
 ```haskell
 isOdd :: Word -> Bool
-isOdd 0 = False
-isOdd n = not (isOdd (n - 1))
+isOdd n = if n == 0 then False else not (isOdd (n - 1))
 ```
 
-Its computation is expensive, so we'd like to memoize its values into
-`Chimera` using `tabulate` and access this stream via `index`
-instead of recalculation of `isOdd`:
+Its computation is expensive, so we'd like to memoize it:
 
 ```haskell
-isOddBS :: Chimera
-isOddBS = tabulate isOdd
-
 isOdd' :: Word -> Bool
-isOdd' = index isOddBS
+isOdd' = memoize isOdd
 ```
 
-We can do even better by replacing part of recursive calls to `isOdd`
-by indexing memoized values. Write `isOddF`
-such that `isOdd = fix isOddF`:
+This is fine to avoid re-evaluation for the same arguments.
+But `isOdd` does not use this cache internally, going all the way
+of recursive calls to `n = 0`. We can do better,
+if we rewrite `isOdd` as a `fix` point of `isOddF`:
 
 ```haskell
 isOddF :: (Word -> Bool) -> Word -> Bool
-isOddF _ 0 = False
-isOddF f n = not (f (n - 1))
+isOddF f n = if n == 0 then False else not (f (n - 1))
 ```
 
-and use `tabulateFix`:
+and invoke `tabulateFix` to pass cache into recursive calls as well:
 
 ```haskell
-isOddBS :: Chimera
-isOddBS = tabulateFix isOddF
-
 isOdd' :: Word -> Bool
-isOdd' = index isOddBS
+isOdd' = memoizeFix isOddF
 ```
 
 ## Example 2
 
 Define a predicate, which checks whether its argument is
-a prime number by trial division.
+a prime number, using trial division.
 
 ```haskell
 isPrime :: Word -> Bool
-isPrime n
-  | n < 2     = False
-  | n < 4     = True
-  | even n    = False
-  | otherwise = and [ n `rem` d /= 0 | d <- [3, 5 .. ceiling (sqrt (fromIntegral n))], isPrime d]
+isPrime n = n > 1 && and [ n `rem` d /= 0 | d <- [2 .. floor (sqrt (fromIntegral n))], isPrime d]
 ```
 
-Convert it to unfixed form:
+This is certainly an expensive recursive computation and we would like
+to speed up its evaluation by wrappping into a caching layer.
+Convert the predicate to an unfixed form such that `isPrime = fix isPrimeF`:
 
 ```haskell
 isPrimeF :: (Word -> Bool) -> Word -> Bool
-isPrimeF f n
-  | n < 2     = False
-  | n < 4     = True
-  | even n    = False
-  | otherwise = and [ n `rem` d /= 0 | d <- [3, 5 .. ceiling (sqrt (fromIntegral n))], f d]
+isPrimeF f n = n > 1 && and [ n `rem` d /= 0 | d <- [2 .. floor (sqrt (fromIntegral n))], f d]
 ```
 
-Create its memoized version for faster evaluation:
+Now create its memoized version for rapid evaluation:
 
 ```haskell
-isPrimeBS :: Chimera
-isPrimeBS = tabulateFix isPrimeF
-
 isPrime' :: Word -> Bool
-isPrime' = index isPrimeBS
+isPrime' = memoizeFix isPrimeF
 ```

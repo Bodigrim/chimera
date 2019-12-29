@@ -8,11 +8,36 @@ copyright: 2017-2019 Bodigrim
 maintainer: andrew.lelechenko@gmail.com
 homepage: https://github.com/Bodigrim/chimera#readme
 category: Data
-synopsis: Lazy, infinite streams with O(1) indexing.
+synopsis: Lazy infinite streams with O(1) indexing
 author: Bodigrim
 extra-source-files:
   README.md
 tested-with: GHC==8.8.1, GHC==8.6.5, GHC==8.4.4, GHC==8.2.2, GHC==8.0.2
+description:
+  There are plenty of memoizing libraries on Hackage, but they
+  usually fall into two categories:
+  .
+  * Store cache as a flat array, enabling us
+    to obtain cached values in O(1) time, which is nice.
+    The drawback is that one must specify the size
+    of the array beforehand,
+    limiting an interval of inputs,
+    and actually allocate it at once.
+  * Store cache as a lazy binary tree.
+    Thanks to laziness, one can freely use the full range of inputs.
+    The drawback is that obtaining values from a tree
+    takes logarithmic time and is unfriendly to CPU cache,
+    which kinda defeats the purpose.
+  .
+  This package intends to tackle both issues,
+  providing a data type 'Chimera' for
+  lazy infinite compact streams with cache-friendly O(1) indexing.
+  .
+  Additional features include:
+  .
+  * memoization of recursive functions and recurrent sequences,
+  * memoization of functions of several, possibly signed arguments,
+  * efficient memoization of boolean predicates.
 
 source-repository head
   type: git

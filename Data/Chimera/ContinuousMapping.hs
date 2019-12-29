@@ -5,58 +5,89 @@
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
 -- Helpers for continuous mappings, useful to memoize
--- predicates on 'Int' (instead of 'Word' only), and
--- predicates over two, three and more arguments.
+-- functions on 'Int' (instead of 'Word' only) and
+-- functions over two and three arguments.
 --
--- __ Example__
+-- __Example 1__
 --
--- An infinite plain board of live and dead cells (common for cellular automatons,
--- e. g., <https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life Conway's Game of Life>)
--- can be represented as a predicate @board@ :: 'Int' -> 'Int' -> 'Bool'. Assume that
--- we want to convert it to memoized form. We cannot do it directly, because 'Data.Chimera.Bool.tabulate'
--- accepts predicates from 'Word' to 'Bool' only.
+-- Imagine writing a program to simulate
+-- <https://en.wikipedia.org/wiki/Rule_90 Rule 90>.
+-- This is a cellular automaton,
+-- which consists of an infinite one-dimensional line of cells,
+-- each being either dead ('False') or alive ('True').
+-- If two neighbours of a cell are equal,
+-- it becomes dead on the next step, otherwise alive.
 --
--- The first step is to define:
+-- Usually cellular automata are modelled by a finite vector.
+-- This is a bit suboptimal, because cellular automata
+-- may grow in different directions over time, but with
+-- a finite vector one has to define a bounding segment well beforehand.
+-- Moreover, what if we are interested to explore
+-- an evolution of an essentially infinite initial configuration?
 --
--- > board'' :: Int -> Int -> Bool
--- > board'' x y = board' (intToWord x) (intToWord y)
--- >
--- > board' :: Word -> Word -> Bool
--- > board' x y = board (wordToInt x) (wordToInt y)
+-- It would be natural to encode an initial configuration
+-- as a function 'Int' @->@ 'Bool', which takes a coordinate
+-- and returns the status of the corresponding cell. Define
+-- a function, which translates the automaton to the next step:
 --
--- This is better, but @board'@ is a predicate over two arguments, and we need it to be a predicate over one.
--- Conversion to Z-curve and back does the trick:
+-- > step :: (Int -> Bool) -> (Int -> Bool)
+-- > step current = \n -> current (n - 1) /= current (n + 1)
 --
--- > board'' :: Int -> Int -> Bool
--- > board'' x y = board1 $ toZCurve (intToWord x) (intToWord y)
--- >
--- > board' :: Word -> Bool
--- > board' z = let (x, y) = fromZCurve z in
--- >            board (wordToInt x) (wordToInt y)
+-- Unfortunately, iterating @step@ would be extremely slow
+-- because of branching recursion. One
+-- could suggest to introduce a caching layer:
 --
--- Now we are ready to insert memoizing layer:
+-- > step :: (Int -> Bool) -> (Int -> Bool)
+-- > step current = \n -> current' (n - 1) /= current' (n + 1)
+-- >   where
+-- >     current' = memoize (current . fromIntegral) . fromIntegral
 --
--- > board'' :: Int -> Int -> Bool
--- > board'' x y = index board' $ toZCurve (intToWord x) (intToWord y)
--- >
--- > board' :: Chimera
--- > board' = tabulate $
--- >   \z -> let (x, y) = fromZCurve z in
--- >         board (wordToInt x) (wordToInt y)
+-- Unfortunately, it would not work well,
+-- because 'fromIntegral' @::@ 'Int' @->@ 'Word'
+-- maps @-1@ to 'maxBound' and it would take ages to memoize
+-- everything up to 'maxBound'.
+-- But continuous mappings 'intToWord' and 'wordToInt' avoid this issue:
+--
+-- > step :: (Int -> Bool) -> (Int -> Bool)
+-- > step current = \n -> current' (n - 1) /= current' (n + 1)
+-- >   where
+-- >     current' = memoize (current . wordToInt) . intToWord
+--
+-- __Example 2__
+--
+-- What about another famous cellular automaton:
+-- <https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life Conway's Game of Life>?
+-- It is two-dimensional, so its state can be represented as
+-- a function 'Int' @->@ 'Int' @->@ 'Bool'. Following the approach above,
+-- we would like to memoize such functions.
+-- Namely, cast the state to 'Word' @->@ 'Bool', ready for memoization:
+--
+-- > cast :: (Int -> Int -> Bool) -> (Word -> Bool)
+-- > cast f = \n -> let (x, y) = fromZCurve n in
+-- >  f (word2int x) (word2int y)
+--
+-- and then back:
+--
+-- > uncast :: (Word -> Bool) -> (Int -> Int -> Bool)
+-- > uncast g = \x y -> g (toZCurve (int2word x) (int2word y))
+--
 
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+{-# LANGUAGE CPP #-}
+
+#include "MachDeps.h"
 
 module Data.Chimera.ContinuousMapping
   ( intToWord
   , wordToInt
+#if WORD_SIZE_IN_BITS == 64
   , toZCurve
   , fromZCurve
   , toZCurve3
   , fromZCurve3
+#endif
   ) where
 
 import Data.Bits
-import Data.Word
 import Unsafe.Coerce
 
 word2int :: Word -> Int
@@ -65,14 +96,16 @@ word2int = unsafeCoerce
 int2word :: Int -> Word
 int2word = unsafeCoerce
 
--- | Total map, which satisfies inequality
--- abs ('intToWord' x - 'intToWord' y) ≤ 2 abs(x - y).
+-- | Total map, which satisfies
 --
--- Note that this is not the case for 'fromIntegral' :: 'Int' -> 'Word',
+-- prop> abs (intToWord x - intToWord y) <= 2 * abs (x - y)
+--
+-- Note that usual 'fromIntegral' @::@ 'Int' @->@ 'Word' does not
+-- satisfy this inequality,
 -- because it has a discontinuity between −1 and 0.
 --
--- > > map intToWord [-5..5]
--- > [9,7,5,3,1,0,2,4,6,8,10]
+-- >>> map intToWord [-5..5]
+-- [9,7,5,3,1,0,2,4,6,8,10]
 intToWord :: Int -> Word
 intToWord i
   | i >= 0    = int2word        i `shiftL` 1
@@ -80,8 +113,8 @@ intToWord i
 
 -- | Inverse for 'intToWord'.
 --
--- > > map wordToInt [0..10]
--- > [0,-1,1,-2,2,-3,3,-4,4,-5,5]
+-- >>> map wordToInt [0..10]
+-- [0,-1,1,-2,2,-3,3,-4,4,-5,5]
 wordToInt :: Word -> Int
 wordToInt w
   | even w    =         word2int (w `shiftR` 1)
@@ -92,16 +125,16 @@ wordToInt w
 --
 -- Only lower halfs of bits of arguments are used (32 bits on 64-bit architecture).
 --
--- > > [ toZCurve x y | x <- [0..3], y <- [0..3] ]
--- > [0,2,8,10,1,3,9,11,4,6,12,14,5,7,13,15]
+-- >>> [ toZCurve x y | x <- [0..3], y <- [0..3] ]
+-- [0,2,8,10,1,3,9,11,4,6,12,14,5,7,13,15]
 toZCurve :: Word -> Word -> Word
 toZCurve x y = part1by1 y `shiftL` 1 .|. part1by1 x
 
 -- | Inverse for 'toZCurve'.
 -- See <https://en.wikipedia.org/wiki/Z-order_curve Z-order curve>.
 --
--- > > map fromZCurve [0..15]
--- > [(0,0),(1,0),(0,1),(1,1),(2,0),(3,0),(2,1),(3,1),(0,2),(1,2),(0,3),(1,3),(2,2),(3,2),(2,3),(3,3)]
+-- >>> map fromZCurve [0..15]
+-- [(0,0),(1,0),(0,1),(1,1),(2,0),(3,0),(2,1),(3,1),(0,2),(1,2),(0,3),(1,3),(2,2),(3,2),(2,3),(3,3)]
 fromZCurve :: Word -> (Word, Word)
 fromZCurve z = (compact1by1 z, compact1by1 (z `shiftR` 1))
 
@@ -110,20 +143,20 @@ fromZCurve z = (compact1by1 z, compact1by1 (z `shiftR` 1))
 --
 -- Only lower thirds of bits of arguments are used (21 bits on 64-bit architecture).
 --
--- > > [ toZCurve3 x y z | x <- [0..3], y <- [0..3], z <- [0..3] ]
--- > [0,4,32,36,2,6,34,38,16,20,48,52,18,22,50,54,1,5,33,37,3,7,35,39,17,21,49,53,19,23,51,55,
--- >  8,12,40,44,10,14,42,46,24,28,56,60,26,30,58,62,9,13,41,45,11,15,43,47,25,29,57,61,27,31,59,63]
+-- >>> [ toZCurve3 x y z | x <- [0..3], y <- [0..3], z <- [0..3] ]
+-- [0,4,32,36,2,6,34,38,16,20,48,52,18,22,50,54,1,5,33,37,3,7,35,39,17,21,49,53,19,23,51,55,
+-- 8,12,40,44,10,14,42,46,24,28,56,60,26,30,58,62,9,13,41,45,11,15,43,47,25,29,57,61,27,31,59,63]
 toZCurve3 :: Word -> Word -> Word -> Word
 toZCurve3 x y z = part1by2 z `shiftL` 2 .|. part1by2 y `shiftL` 1 .|. part1by2 x
 
 -- | Inverse for 'toZCurve3'.
 -- See <https://en.wikipedia.org/wiki/Z-order_curve Z-order curve>.
 --
--- > > map fromZCurve3 [0..63]
--- > [(0,0,0),(1,0,0),(0,1,0),(1,1,0),(0,0,1),(1,0,1),(0,1,1),(1,1,1),(2,0,0),(3,0,0),(2,1,0),(3,1,0),(2,0,1),(3,0,1),(2,1,1),(3,1,1),
--- >  (0,2,0),(1,2,0),(0,3,0),(1,3,0),(0,2,1),(1,2,1),(0,3,1),(1,3,1),(2,2,0),(3,2,0),(2,3,0),(3,3,0),(2,2,1),(3,2,1),(2,3,1),(3,3,1),
--- >  (0,0,2),(1,0,2),(0,1,2),(1,1,2),(0,0,3),(1,0,3),(0,1,3),(1,1,3),(2,0,2),(3,0,2),(2,1,2),(3,1,2),(2,0,3),(3,0,3),(2,1,3),(3,1,3),
--- >  (0,2,2),(1,2,2),(0,3,2),(1,3,2),(0,2,3),(1,2,3),(0,3,3),(1,3,3),(2,2,2),(3,2,2),(2,3,2),(3,3,2),(2,2,3),(3,2,3),(2,3,3),(3,3,3)]
+-- >>> map fromZCurve3 [0..63]
+-- [(0,0,0),(1,0,0),(0,1,0),(1,1,0),(0,0,1),(1,0,1),(0,1,1),(1,1,1),(2,0,0),(3,0,0),(2,1,0),(3,1,0),(2,0,1),(3,0,1),(2,1,1),(3,1,1),
+--  (0,2,0),(1,2,0),(0,3,0),(1,3,0),(0,2,1),(1,2,1),(0,3,1),(1,3,1),(2,2,0),(3,2,0),(2,3,0),(3,3,0),(2,2,1),(3,2,1),(2,3,1),(3,3,1),
+--  (0,0,2),(1,0,2),(0,1,2),(1,1,2),(0,0,3),(1,0,3),(0,1,3),(1,1,3),(2,0,2),(3,0,2),(2,1,2),(3,1,2),(2,0,3),(3,0,3),(2,1,3),(3,1,3),
+--  (0,2,2),(1,2,2),(0,3,2),(1,3,2),(0,2,3),(1,2,3),(0,3,3),(1,3,3),(2,2,2),(3,2,2),(2,3,2),(3,3,2),(2,2,3),(3,2,3),(2,3,3),(3,3,3)]
 fromZCurve3 :: Word -> (Word, Word, Word)
 fromZCurve3 z = (compact1by2 z, compact1by2 (z `shiftR` 1), compact1by2 (z `shiftR` 2))
 
