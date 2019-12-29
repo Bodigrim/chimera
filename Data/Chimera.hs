@@ -43,18 +43,7 @@ module Data.Chimera
   , tabulateFixM
   , iterateM
 
-  -- * Manipulation
-  , drop
-  , mapWithKey
-  , zipWithKey
-
-  -- * Monadic manipulation
-  -- $monadic
-  , traverseWithKey
-  , zipWithKeyM
-
   -- * Interaction with subvectors
-  , convert
   , liftUnOp
   , liftUnOpM
   , liftBinOp
@@ -98,9 +87,9 @@ type UChimera = Chimera U.Vector
 -- | 'pure' creates a constant stream.
 instance Applicative (Chimera V.Vector) where
   pure   = tabulate   . const
-  (<*>)  = zipWithKey (const ($))
+  (<*>)  = liftBinOp (const (<*>))
 #if __GLASGOW_HASKELL__ > 801
-  liftA2 = zipWithKey . const
+  liftA2 f = liftBinOp (const (liftA2 f))
 #endif
 
 bits :: Int
@@ -237,9 +226,6 @@ cycle vec = case l of
   where
     l = int2word $ G.length vec
 
-drop :: G.Vector v a => Word -> Chimera v a -> Chimera v a
-drop n ch = tabulate (index ch . (+ n))
-
 -- | Memoize a function:
 -- repeating calls to 'memoize' @f@ @n@
 -- would compute @f@ @n@ only once
@@ -275,20 +261,6 @@ memoize = index @V.Vector . tabulate
 memoizeFix :: ((Word -> a) -> Word -> a) -> (Word -> a)
 memoizeFix = index @V.Vector . tabulateFix
 
--- | Map over all indices and respective elements in the stream.
-mapWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> b) -> Chimera v a -> Chimera v b
-mapWithKey f = runIdentity . traverseWithKey ((pure .) . f)
-
--- | Traverse over all indices and respective elements in the stream.
-traverseWithKey
-  :: forall m v a b.
-     (Monad m, G.Vector v a, G.Vector v b)
-  => (Word -> a -> m b)
-  -> Chimera v a
-  -> m (Chimera v b)
-traverseWithKey f = liftUnOpM (\off -> G.imapM (f . (+ off) . int2word))
-{-# SPECIALIZE traverseWithKey :: (G.Vector v a, G.Vector v b) => (Word -> a -> Identity b) -> Chimera v a -> Identity (Chimera v b) #-}
-
 liftUnOp
   :: (G.Vector v a, G.Vector w b)
   => (Word -> v a -> w b)
@@ -307,27 +279,6 @@ liftUnOpM f (Chimera bs) = Chimera <$> V.imapM g bs
     g logOffset = f (1 `shiftL` (logOffset - 1))
 
 {-# SPECIALIZE liftUnOpM :: (G.Vector v a, G.Vector w b) => (Word -> v a -> Identity (w b)) -> Chimera v a -> Identity (Chimera w b) #-}
-
--- | Zip two streams with the function, which is provided with an index and respective elements of both streams.
-zipWithKey
-  :: (G.Vector v a, G.Vector v b, G.Vector v c)
-  => (Word -> a -> b -> c)
-  -> Chimera v a
-  -> Chimera v b
-  -> Chimera v c
-zipWithKey f = (runIdentity .) . zipWithKeyM (((pure .) .) . f)
-
--- | Zip two streams with the monadic function, which is provided with an index and respective elements of both streams.
-zipWithKeyM
-  :: forall m v a b c.
-     (Monad m, G.Vector v a, G.Vector v b, G.Vector v c)
-  => (Word -> a -> b -> m c)
-  -> Chimera v a
-  -> Chimera v b
-  -> m (Chimera v c)
-zipWithKeyM f = liftBinOpM (\off -> G.izipWithM (f . (+ off) . int2word))
-
-{-# SPECIALIZE zipWithKeyM :: (G.Vector v a, G.Vector v b, G.Vector v c) => (Word -> a -> b -> Identity c) -> Chimera v a -> Chimera v b -> Identity (Chimera v c) #-}
 
 liftBinOp
   :: (G.Vector u a, G.Vector v b, G.Vector w c)
@@ -349,10 +300,3 @@ liftBinOpM f (Chimera bs1) (Chimera bs2) = Chimera <$> V.izipWithM g bs1 bs2
     g logOffset = f (1 `shiftL` (logOffset - 1))
 
 {-# SPECIALIZE liftBinOpM :: (G.Vector u a, G.Vector v b, G.Vector w c) => (Word -> u a -> v b -> Identity (w c)) -> Chimera u a -> Chimera v b -> Identity (Chimera w c) #-}
-
--- | Convert underlying vector type.
-convert
-  :: (G.Vector v a, G.Vector w a)
-  => Chimera v a
-  -> Chimera w a
-convert (Chimera bs) = Chimera (V.map G.convert bs)
