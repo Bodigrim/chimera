@@ -93,16 +93,14 @@ chimeraTests = testGroup "Chimera"
           vs U.! (fromIntegral jx `mod` U.length vs) === Ch.index (Ch.cycle vs) jx
 
   , QC.testProperty "mapWithKey" $
-    \(Blind bs) (Fun _ (g :: (Word, Bool) -> Bool)) ix ->
+    \(Blind bs) (Fun _ (g :: Word -> Word)) ix ->
       let jx = ix `mod` 65536 in
-      let mapWithKey f = Ch.imapSubvectors (\off -> G.imap (f . (+ off) . fromIntegral)) in
-        g (jx, Ch.index bs jx) === Ch.index (mapWithKey (curry g) bs :: Ch.Chimera U.Vector Bool) jx
+        g (Ch.index bs jx) === Ch.index (Ch.mapSubvectors (G.map g) bs :: Ch.Chimera U.Vector Word) jx
 
   , QC.testProperty "zipWithKey" $
-    \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Bool, Bool) -> Bool)) ix ->
+    \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Word) -> Word)) ix ->
       let jx = ix `mod` 65536 in
-      let zipWithKey f = Ch.izipSubvectors (\off -> G.izipWith (f . (+ off) . fromIntegral)) in
-        g (jx, Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (zipWithKey (\i b1 b2 -> g (i, b1, b2)) bs1 bs2 :: Ch.Chimera U.Vector Bool) jx
+        g (Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipSubvectors (G.zipWith (curry g)) bs1 bs2 :: Ch.Chimera U.Vector Word) jx
   ]
 
 -------------------------------------------------------------------------------

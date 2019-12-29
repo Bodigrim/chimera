@@ -45,10 +45,8 @@ module Data.Chimera
 
   -- * Interaction with subvectors
   -- $subvectors
-  , imapSubvectors
-  , imapSubvectorsM
-  , izipSubvectors
-  , izipSubvectorsM
+  , mapSubvectors
+  , zipSubvectors
   ) where
 
 import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
@@ -104,9 +102,9 @@ type UChimera = Chimera U.Vector
 -- | 'pure' creates a constant stream.
 instance Applicative (Chimera V.Vector) where
   pure   = tabulate   . const
-  (<*>)  = izipSubvectors (const (<*>))
+  (<*>)  = zipSubvectors (<*>)
 #if __GLASGOW_HASKELL__ > 801
-  liftA2 f = izipSubvectors (const (liftA2 f))
+  liftA2 f = zipSubvectors (liftA2 f)
 #endif
 
 bits :: Int
@@ -291,55 +289,19 @@ memoize = index @V.Vector . tabulate
 memoizeFix :: ((Word -> a) -> Word -> a) -> (Word -> a)
 memoizeFix = index @V.Vector . tabulateFix
 
--- | Map subvectors of a stream, using a given function.
--- This function receives a position
--- of the first element of subvector in the stream
--- and the subvector itself.
--- It must preserve the length.
-imapSubvectors
+-- | Map subvectors of a stream, using a given length-preserving function.
+mapSubvectors
   :: (G.Vector u a, G.Vector v b)
-  => (Word -> u a -> v b)
+  => (u a -> v b)
   -> Chimera u a
   -> Chimera v b
-imapSubvectors f = runIdentity . imapSubvectorsM ((pure .) . f)
+mapSubvectors f (Chimera bs) = Chimera (V.map f bs)
 
--- | Monadic version of 'imapSubvectors'.
-imapSubvectorsM
-  :: (Monad m, G.Vector u a, G.Vector v b)
-  => (Word -> u a -> m (v b))
-  -> Chimera u a
-  -> m (Chimera v b)
-imapSubvectorsM f (Chimera bs) = Chimera <$> V.imapM g bs
-  where
-    g 0         = f 0
-    g logOffset = f (1 `shiftL` (logOffset - 1))
-
-{-# SPECIALIZE imapSubvectorsM :: (G.Vector v a, G.Vector w b) => (Word -> v a -> Identity (w b)) -> Chimera v a -> Identity (Chimera w b) #-}
-
--- | Zip subvectors from two streams, using a given function.
--- This function receives a position
--- of the first element of subvector in the stream
--- and both relevant subvectors
--- (which are guaranteed to be aligned and have the same length).
--- It must preserve the length.
-izipSubvectors
+-- | Zip subvectors from two streams, using a given length-preserving function.
+zipSubvectors
   :: (G.Vector u a, G.Vector v b, G.Vector w c)
-  => (Word -> u a -> v b -> w c)
+  => (u a -> v b -> w c)
   -> Chimera u a
   -> Chimera v b
   -> Chimera w c
-izipSubvectors f = (runIdentity .) . izipSubvectorsM (((pure .) .) . f)
-
--- | Monadic version of 'izipSubvectors'.
-izipSubvectorsM
-  :: (Monad m, G.Vector u a, G.Vector v b, G.Vector w c)
-  => (Word -> u a -> v b -> m (w c))
-  -> Chimera u a
-  -> Chimera v b
-  -> m (Chimera w c)
-izipSubvectorsM f (Chimera bs1) (Chimera bs2) = Chimera <$> V.izipWithM g bs1 bs2
-  where
-    g 0         = f 0
-    g logOffset = f (1 `shiftL` (logOffset - 1))
-
-{-# SPECIALIZE izipSubvectorsM :: (G.Vector u a, G.Vector v b, G.Vector w c) => (Word -> u a -> v b -> Identity (w c)) -> Chimera u a -> Chimera v b -> Identity (Chimera w c) #-}
+zipSubvectors f (Chimera bs1) (Chimera bs2) = Chimera (V.zipWith f bs1 bs2)
