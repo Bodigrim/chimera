@@ -15,8 +15,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
-
 module Data.Chimera
   ( -- * Memoization
     memoize
@@ -52,14 +50,11 @@ module Data.Chimera
 import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
 import Control.Applicative
 import Data.Bits
-import Data.Foldable hiding (and, or, toList)
 import Data.Function (fix)
 import Data.Functor.Identity
-import Data.Proxy
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed as U
-import Data.Word
 
 import Data.Chimera.Compat
 import Data.Chimera.FromIntegral
