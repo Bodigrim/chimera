@@ -46,6 +46,8 @@ source-repository head
 library
   build-depends:
     base >=4.9 && <5,
+    adjunctions,
+    distributive,
     vector
   exposed-modules:
     Data.Chimera
