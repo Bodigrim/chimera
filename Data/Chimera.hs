@@ -145,15 +145,13 @@ tabulateM
      (Monad m, G.Vector v a)
   => (Word -> m a)
   -> m (Chimera v a)
-tabulateM f = do
-  z  <- f 0
-  zs <- V.generateM bits tabulateSubVector
-  pure $ Chimera $ G.singleton z `V.cons` zs
+tabulateM f = Chimera <$> V.generateM (bits + 1) tabulateSubVector
   where
     tabulateSubVector :: Int -> m (v a)
+    tabulateSubVector 0 = G.singleton <$> f 0
     tabulateSubVector i = G.generateM ii (\j -> f (int2word (ii + j)))
       where
-        ii = 1 `shiftL` i
+        ii = 1 `shiftL` (i - 1)
 
 {-# SPECIALIZE tabulateM :: G.Vector v a => (Word -> Identity a) -> Identity (Chimera v a) #-}
 
@@ -192,17 +190,15 @@ tabulateFixM
 tabulateFixM f = result
   where
     result :: m (Chimera v a)
-    result = do
-      z  <- fix f 0
-      zs <- V.generateM bits tabulateSubVector
-      pure $ Chimera $ G.singleton z `V.cons` zs
+    result = Chimera <$> V.generateM (bits + 1) tabulateSubVector
 
     tabulateSubVector :: Int -> m (v a)
+    tabulateSubVector 0 = G.singleton <$> fix f 0
     tabulateSubVector i = subResult
       where
         subResult      = G.generateM ii (\j -> f fixF (int2word (ii + j)))
         subResultBoxed = V.generateM ii (\j -> f fixF (int2word (ii + j)))
-        ii = 1 `shiftL` i
+        ii = 1 `shiftL` (i - 1)
 
         fixF :: Word -> m a
         fixF k
