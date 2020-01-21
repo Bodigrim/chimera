@@ -151,7 +151,7 @@ tabulateM f = Chimera <$> V.generateM (bits + 1) tabulateSubVector
     tabulateSubVector 0 = G.singleton <$> f 0
     tabulateSubVector i = G.generateM ii (\j -> f (int2word (ii + j)))
       where
-        ii = 1 `shiftL` (i - 1)
+        ii = 1 `unsafeShiftL` (i - 1)
 
 {-# SPECIALIZE tabulateM :: G.Vector v a => (Word -> Identity a) -> Identity (Chimera v a) #-}
 
@@ -198,7 +198,7 @@ tabulateFixM f = result
       where
         subResult      = G.generateM ii (\j -> f fixF (int2word (ii + j)))
         subResultBoxed = V.generateM ii (\j -> f fixF (int2word (ii + j)))
-        ii = 1 `shiftL` (i - 1)
+        ii = 1 `unsafeShiftL` (i - 1)
 
         fixF :: Word -> m a
         fixF k
@@ -242,7 +242,7 @@ iterateM f seed = do
 -- 81
 index :: G.Vector v a => Chimera v a -> Word -> a
 index (Chimera vs) 0 = G.unsafeHead (V.unsafeHead vs)
-index (Chimera vs) i = G.unsafeIndex (vs `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `shiftL` sgm)
+index (Chimera vs) i = G.unsafeIndex (vs `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `unsafeShiftL` sgm)
   where
     sgm :: Int
     sgm = fbs i - 1 - word2int (clz i)
