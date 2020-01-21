@@ -12,10 +12,8 @@ module Data.Chimera.FromIntegral
   , int2word
   ) where
 
-import Unsafe.Coerce
-
 word2int :: Word -> Int
-word2int = unsafeCoerce
+word2int = fromIntegral
 
 int2word :: Int -> Word
-int2word = unsafeCoerce
+int2word = fromIntegral
