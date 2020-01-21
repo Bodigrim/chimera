@@ -49,6 +49,7 @@ module Data.Chimera
 
 import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
 import Control.Applicative
+import Control.Monad.Zip
 import Data.Bits
 import Data.Function (fix)
 import Data.Functor.Identity
@@ -309,7 +310,7 @@ mapSubvectors
   => (u a -> v b)
   -> Chimera u a
   -> Chimera v b
-mapSubvectors f (Chimera bs) = Chimera (V.map f bs)
+mapSubvectors f (Chimera bs) = Chimera (fmap f bs)
 
 -- | Zip subvectors from two streams, using a given length-preserving function.
 zipSubvectors
@@ -318,4 +319,4 @@ zipSubvectors
   -> Chimera u a
   -> Chimera v b
   -> Chimera w c
-zipSubvectors f (Chimera bs1) (Chimera bs2) = Chimera (V.zipWith f bs1 bs2)
+zipSubvectors f (Chimera bs1) (Chimera bs2) = Chimera (mzipWith f bs1 bs2)
