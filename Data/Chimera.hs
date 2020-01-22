@@ -6,6 +6,7 @@
 --
 -- Lazy infinite streams with O(1) indexing.
 
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveFoldable      #-}
 {-# LANGUAGE DeriveFunctor       #-}
@@ -242,11 +243,14 @@ iterateM f seed = do
 -- >>> index ch 9
 -- 81
 index :: G.Vector v a => Chimera v a -> Word -> a
-index (Chimera vs) 0 = G.unsafeHead (V.unsafeHead vs)
-index (Chimera vs) i = G.unsafeIndex (vs `V.unsafeIndex` (sgm + 1)) (word2int $ i - 1 `unsafeShiftL` sgm)
+index (Chimera vs) i =
+  (vs `V.unsafeIndex` (fbs i - lz))
+  `G.unsafeIndex`
+  (word2int (i .&. complement ((1 `shiftL` (fbs i - 1)) `unsafeShiftR` lz)))
   where
-    sgm :: Int
-    sgm = fbs i - 1 - word2int (clz i)
+    lz :: Int
+    !lz = word2int (clz i)
+{-# INLINE index #-}
 
 -- | Convert a stream to an infinite list.
 --
