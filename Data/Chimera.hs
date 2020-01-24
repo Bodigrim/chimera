@@ -55,11 +55,14 @@ import Control.Monad.Zip
 import Data.Bits
 import Data.Function (fix)
 import Data.Functor.Identity
-import Data.Distributive
-import qualified Data.Functor.Rep as Rep
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed as U
+
+#if DefineRepresentable
+import Data.Distributive
+import qualified Data.Functor.Rep as Rep
+#endif
 
 import Data.Chimera.Compat
 import Data.Chimera.FromIntegral
@@ -130,13 +133,18 @@ instance Applicative (Chimera V.Vector) where
   liftA2 f = zipSubvectors (liftA2 f)
 #endif
 
+#if DefineRepresentable
+
 instance Distributive (Chimera V.Vector) where
-  distribute xs = tabulate (\k -> fmap (`index` k) xs)
+  distribute = Rep.distributeRep
+  collect = Rep.collectRep
 
 instance Rep.Representable (Chimera V.Vector) where
   type Rep (Chimera V.Vector) = Word
   tabulate = tabulate
   index = index
+
+#endif
 
 bits :: Int
 bits = fbs (0 :: Word)

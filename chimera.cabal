@@ -43,12 +43,15 @@ source-repository head
   type: git
   location: https://github.com/Bodigrim/chimera
 
+flag representable
+  description: Define Representable instance from adjunctions package
+  default: True
+
 library
-  build-depends:
-    base >=4.9 && <5,
-    adjunctions,
-    distributive,
-    vector
+  build-depends: base >=4.9 && <5, vector
+  if flag(representable)
+    build-depends: adjunctions, distributive
+    cpp-options: -DDefineRepresentable
   exposed-modules:
     Data.Chimera
     Data.Chimera.ContinuousMapping
