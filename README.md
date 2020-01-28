@@ -63,7 +63,7 @@ isOddF :: (Word -> Bool) -> Word -> Bool
 isOddF f n = if n == 0 then False else not (f (n - 1))
 ```
 
-and invoke `tabulateFix` to pass cache into recursive calls as well:
+and invoke `memoizeFix` to pass cache into recursive calls as well:
 
 ```haskell
 isOdd' :: Word -> Bool
