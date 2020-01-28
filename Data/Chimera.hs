@@ -6,16 +6,17 @@
 --
 -- Lazy infinite streams with O(1) indexing.
 
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE DeriveFoldable      #-}
-{-# LANGUAGE DeriveFunctor       #-}
-{-# LANGUAGE DeriveTraversable   #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE DeriveFoldable        #-}
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE DeriveTraversable     #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Data.Chimera
   ( -- * Memoization
@@ -51,15 +52,16 @@ module Data.Chimera
 
 import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
 import Control.Applicative
+import Control.Monad.Fix
 import Control.Monad.Zip
 import Data.Bits
-import Data.Function (fix)
 import Data.Functor.Identity
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed as U
 
 #if DefineRepresentable
+import Control.Monad.Reader
 import Data.Distributive
 import qualified Data.Functor.Rep as Rep
 #endif
@@ -133,7 +135,21 @@ instance Applicative (Chimera V.Vector) where
   liftA2 f = zipSubvectors (liftA2 f)
 #endif
 
+instance Monad (Chimera V.Vector) where
+  m >>= f = tabulate $ \w -> index (f (index m w)) w
+
+instance MonadFix (Chimera V.Vector) where
+  mfix = tabulate . mfix . fmap index
+
+instance MonadZip (Chimera V.Vector) where
+  mzip as bs = tabulate (\w -> (index as w, index bs w))
+  mzipWith f as bs = tabulate $ \w -> f (index as w) (index bs w)
+
 #if DefineRepresentable
+
+instance MonadReader Word (Chimera V.Vector) where
+  ask = Rep.askRep
+  local = Rep.localRep
 
 instance Distributive (Chimera V.Vector) where
   distribute = Rep.distributeRep

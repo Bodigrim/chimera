@@ -50,7 +50,7 @@ flag representable
 library
   build-depends: base >=4.9 && <5, vector
   if flag(representable)
-    build-depends: adjunctions, distributive
+    build-depends: adjunctions, distributive, mtl
     cpp-options: -DDefineRepresentable
   exposed-modules:
     Data.Chimera
