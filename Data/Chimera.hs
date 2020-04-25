@@ -340,6 +340,15 @@ memoize = index @V.Vector . tabulate
 -- 55
 -- >>> memoizeFix fiboF 100
 -- 354224848179261915075
+--
+-- This function can be used even when arguments
+-- of recursive calls are not strictly decreasing.
+-- For example, here is a routine to measure the length of
+-- <https://oeis.org/A006577 Collatz sequence>:
+--
+-- >>> collatzF f n = if n <= 1 then 0 else 1 + f (if even n then n `quot` 2 else 3 * n + 1)
+-- >>> memoizeFix collatzF 27
+-- 111
 memoizeFix :: ((Word -> a) -> Word -> a) -> (Word -> a)
 memoizeFix = index @V.Vector . tabulateFix
 
