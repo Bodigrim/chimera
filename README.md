@@ -106,9 +106,9 @@ newtype Chimera v a = Chimera (Data.Vector.Vector (v a))
 ```
 
 Assuming 64-bit architecture, the outer vector consists of 65 inner vectors
-of sizes 1, 1, 2, 2<sup>2</sup>, ..., 2<sup>63</sup>. Since the outer vector
+of sizes 1, 1, 2, 2², ..., 2⁶³. Since the outer vector
 is boxed, inner vectors are allocated on-demand only: quite fortunately,
-there is no need to allocate all 2<sup>64</sup> elements at once.
+there is no need to allocate all 2⁶⁴ elements at once.
 
 To access an element by its index it is enough to find out to which inner
 vector it belongs, which, thanks to the doubling pattern of sizes,
@@ -120,13 +120,13 @@ a dense access. `Chimera` is no good for sparse access
 over a thin set of indices.
 
 One can argue that this structure is not infinite,
-because it cannot handle more than 2<sup>64</sup> elements.
+because it cannot handle more than 2⁶⁴ elements.
 I believe that it is _infinite enough_ and no one would be able to exhaust
 its finiteness any time soon. Strictly speaking, to cope with indices out of
 `Word` range and `memoize`
 [Ackermann function](https://en.wikipedia.org/wiki/Ackermann_function),
 one could use more layers of indirection, raising access time
-to O([log<sup>*</sup>](https://en.wikipedia.org/wiki/Iterated_logarithm) n).
+to O([log ⃰](https://en.wikipedia.org/wiki/Iterated_logarithm) n).
 I still think that it is morally correct to claim O(1) access,
 because all asymptotic estimates of data structures
 are usually made under an assumption that they contain
