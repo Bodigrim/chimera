@@ -61,7 +61,7 @@ import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed as U
 
 #if DefineRepresentable
-import Control.Monad.Reader
+import Control.Monad.Reader (MonadReader, ask, local)
 import Data.Distributive
 import qualified Data.Functor.Rep as Rep
 #endif
