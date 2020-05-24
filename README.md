@@ -3,7 +3,7 @@
 Lazy infinite compact streams with cache-friendly O(1) indexing
 and applications for memoization.
 
-----
+## Introduction
 
 Imagine having a function `f :: Word -> a`,
 which is expensive to evaluate. We would like to _memoize_ it,
@@ -96,6 +96,57 @@ isPrime' :: Word -> Bool
 isPrime' = memoizeFix isPrimeF
 ```
 
+## What about non-`Word` arguments?
+
+`Chimera` itself can memoize only `Word -> a` functions, which sounds restrictive.
+That is because we decided to outsource
+enumerating of user's datatypes to other packages, e. g.,
+[`cantor-pairing`](http://hackage.haskell.org/package/cantor-pairing).
+Use `fromInteger . fromCantor` to convert data to `Word`
+and `toCantor . toInteger` to go back.
+
+Also, `Data.Chimera.ContinuousMapping` covers several simple cases,
+such as `Int`, pairs and triples.
+
+## Benchmarks
+
+How important is to store cached data as a flat array instead of a lazy binary tree?
+Let us measure the maximal length of [Collatz sequence](https://oeis.org/A006577),
+using `chimera` and `memoize` packages.
+
+```haskell
+{-# LANGUAGE TypeApplications #-}
+import Data.Chimera
+import Data.Function.Memoize
+import Data.Ord
+import Data.List
+import Data.Time.Clock
+
+collatzF :: Integral a => (a -> a) -> (a -> a)
+collatzF f n = if n <= 1 then 0 else 1 + f (if even n then n `quot` 2 else 3 * n + 1)
+
+measure :: (Integral a, Show a) => String -> (((a -> a) -> (a -> a)) -> (a -> a)) -> IO ()
+measure name memo = do
+  t0 <- getCurrentTime
+  print $ maximumBy (comparing (memo collatzF)) [0..1000000]
+  t1 <- getCurrentTime
+  putStrLn $ name ++ " " ++ show (diffUTCTime t1 t0)
+
+main :: IO ()
+main = do
+  measure "chimera" Data.Chimera.memoizeFix
+  measure "memoize" (Data.Function.Memoize.memoFix @Int)
+```
+
+Here `chimera` appears to be 20x faster than `memoize`:
+
+```
+837799
+chimera 0.428015s
+837799
+memoize 8.955953s
+```
+
 ## Magic and its exposure
 
 Internally `Chimera` is represented as a _boxed_ vector
@@ -132,3 +183,7 @@ because all asymptotic estimates of data structures
 are usually made under an assumption that they contain
 less than `maxBound :: Word` elements
 (otherwise you can not even treat pointers as a fixed-size data).
+
+## Additional resources
+
+* [Lazy streams with O(1) access](https://github.com/Bodigrim/my-talks/raw/master/londonhaskell2020/slides.pdf), London Haskell, 25.02.2020.

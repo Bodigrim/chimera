@@ -313,6 +313,8 @@ cycle vec = case l of
 -- would compute @f@ @n@ only once
 -- and cache the result in 'VChimera'.
 -- This is just a shortcut for 'index' '.' 'tabulate'.
+-- When @a@ is 'U.Unbox', it is faster to use
+-- 'index' ('tabulate' @f@ :: 'UChimera' @a@).
 --
 -- prop> memoize f n = f n
 memoize :: (Word -> a) -> (Word -> a)
@@ -321,6 +323,8 @@ memoize = index @V.Vector . tabulate
 -- | For a given @f@ memoize a recursive function 'fix' @f@,
 -- caching results in 'VChimera'.
 -- This is just a shortcut for 'index' '.' 'tabulateFix'.
+-- When @a@ is 'U.Unbox', it is faster to use
+-- 'index' ('tabulateFix' @f@ :: 'UChimera' @a@).
 --
 -- prop> memoizeFix f n = fix f n
 --
