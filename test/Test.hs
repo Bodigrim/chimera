@@ -43,7 +43,7 @@ contMapTests = testGroup "ContinuousMapping"
     ]
 
   , testGroup "to . from Z-curve 2D"
-    [ QC.testProperty "random" $ \z -> (\(x, y) -> toZCurve x y) (fromZCurve z) === z
+    [ QC.testProperty "random" $ \z -> uncurry toZCurve (fromZCurve z) === z
     ]
   , testGroup "from . to Z-curve 2D"
     [ QC.testProperty "random" $ \x y -> fromZCurve (toZCurve x y) === (x `rem` (1 `shiftL` 32), y `rem` (1 `shiftL` 32))

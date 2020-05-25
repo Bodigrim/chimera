@@ -8,8 +8,6 @@
 
 {-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE CPP                   #-}
-{-# LANGUAGE DeriveFoldable        #-}
-{-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -281,7 +279,7 @@ index :: G.Vector v a => Chimera v a -> Word -> a
 index (Chimera vs) i =
   (vs `V.unsafeIndex` (fbs i - lz))
   `G.unsafeIndex`
-  (word2int (i .&. complement ((1 `shiftL` (fbs i - 1)) `unsafeShiftR` lz)))
+  word2int (i .&. complement ((1 `shiftL` (fbs i - 1)) `unsafeShiftR` lz))
   where
     lz :: Int
     !lz = word2int (clz i)
