@@ -20,6 +20,7 @@ module Data.Chimera
   ( -- * Memoization
     memoize
   , memoizeFix
+  , memoizeFix'
 
   -- * Chimera
   , Chimera
@@ -29,6 +30,7 @@ module Data.Chimera
   -- * Construction
   , tabulate
   , tabulateFix
+  , tabulateFix'
   , iterate
   , cycle
 
@@ -40,6 +42,7 @@ module Data.Chimera
   -- $monadic
   , tabulateM
   , tabulateFixM
+  , tabulateFixM'
   , iterateM
 
   -- * Subvectors
@@ -216,8 +219,16 @@ tabulateM f = Chimera <$> V.generateM (bits + 1) tabulateSubVector
 -- 4862
 -- >>> take 10 (toList ch)
 -- [1,1,2,5,14,42,132,429,1430,4862]
+--
+-- __Note__: Only recursive function calls with decreasing arguments are memoized.
+-- If full memoization is desired, use 'tabulateFix'' instead.
 tabulateFix :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix uf = runIdentity $ tabulateFixM ((pure .) . uf . (runIdentity .))
+
+-- | Fully memoizing version of 'tabulateFix'.
+-- This function will allocate a lot of memory when misused (see 'memoizeFix'').
+tabulateFix' :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
+tabulateFix' uf = runIdentity $ tabulateFixM' ((pure .) . uf . (runIdentity .))
 
 -- | Monadic version of 'tabulateFix'.
 -- There are no particular guarantees about the order of recursive calls:
@@ -245,12 +256,40 @@ tabulateFixM f = result
         fixF k
           | k < int2word ii
           = flip index k <$> result
-          | k < int2word ii `shiftL` 1
+          | k <= int2word ii `shiftL` 1 - 1
           = (`V.unsafeIndex` (word2int k - ii)) <$> subResultBoxed
           | otherwise
           = f fixF k
 
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
+
+-- | Monadic version of 'tabulateFix''.
+tabulateFixM'
+  :: forall m v a.
+     (Monad m, G.Vector v a)
+  => ((Word -> m a) -> Word -> m a)
+  -> m (Chimera v a)
+tabulateFixM' f = result
+  where
+    result :: m (Chimera v a)
+    result = Chimera <$> V.generateM (bits + 1) tabulateSubVector
+
+    tabulateSubVector :: Int -> m (v a)
+    tabulateSubVector 0 = G.singleton <$> f (\k -> flip index k <$> result) 0
+    tabulateSubVector i = subResult
+      where
+        subResult      = G.generateM ii (\j -> f fixF (int2word (ii + j)))
+        subResultBoxed = V.generateM ii (\j -> f fixF (int2word (ii + j)))
+        ii = 1 `unsafeShiftL` (i - 1)
+
+        fixF :: Word -> m a
+        fixF k
+          | k < int2word ii
+          = flip index k <$> result
+          | k <= int2word ii `shiftL` 1 - 1
+          = (`V.unsafeIndex` (word2int k - ii)) <$> subResultBoxed
+          | otherwise
+          = flip index k <$> result
 
 -- | 'iterate' @f@ @x@ returns an infinite stream
 -- of repeated applications of @f@ to @x@.
@@ -350,7 +389,9 @@ memoize = index @V.Vector . tabulate
 -- 354224848179261915075
 --
 -- This function can be used even when arguments
--- of recursive calls are not strictly decreasing.
+-- of recursive calls are not strictly decreasing,
+-- but they might not get memoized. If this is not desired
+-- use 'memoizeFix'' instead.
 -- For example, here is a routine to measure the length of
 -- <https://oeis.org/A006577 Collatz sequence>:
 --
@@ -359,6 +400,28 @@ memoize = index @V.Vector . tabulate
 -- 111
 memoizeFix :: ((Word -> a) -> Word -> a) -> (Word -> a)
 memoizeFix = index @V.Vector . tabulateFix
+
+-- | Fully memoizing version of 'memoizeFix'.
+-- This function will memoize every recursive call,
+-- but might allocate a lot of memory in doing so.
+-- For example, the following piece of code calculates the
+-- highest number reached by the collatz sequence
+-- of a given number, but also allocates tens of gigabytes of memory,
+-- because the collatz sequence will spike to very high numbers.
+--
+-- >>> collatzF :: (Word -> Word) -> (Word -> Word)
+-- >>> collatzF _ 0 = 0
+-- >>> collatzF f n = if n <= 2 then 4 else n `max` f (if even n then n `quot` 2 else 3 * n + 1)
+-- >>>
+-- >>> maximumBy (comparing $ memoizeFix' collatzF) [0..1000000]
+-- ...
+--
+-- Using 'memoizeFix' instead fixes the problem:
+--
+-- >>> maximumBy (comparing $ memoizeFix collatzF) [0..1000000]
+-- 56991483520
+memoizeFix' :: ((Word -> a) -> Word -> a) -> (Word -> a)
+memoizeFix' = index @V.Vector . tabulateFix'
 
 -- | Map subvectors of a stream, using a given length-preserving function.
 mapSubvectors
