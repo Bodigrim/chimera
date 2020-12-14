@@ -73,11 +73,18 @@ chimeraTests = testGroup "Chimera"
     \(Fun _ (f :: Word -> Bool)) ix ->
       let jx = ix `mod` 65536 in
         f jx === Ch.index (Ch.tabulate f :: Ch.Chimera U.Vector Bool) jx
+
   , QC.testProperty "index . tabulateFix = fix" $
     \(Fun _ g) ix ->
       let jx = ix `mod` 65536 in
         let f = mkUnfix g in
           fix f jx === Ch.index (Ch.tabulateFix f :: Ch.Chimera U.Vector Bool) jx
+
+  , QC.testProperty "index . tabulateFix' = fix" $
+    \(Fun _ g) ix ->
+      let jx = ix `mod` 65536 in
+        let f = mkUnfix g in
+          fix f jx === Ch.index (Ch.tabulateFix' f :: Ch.Chimera U.Vector Bool) jx
 
   , QC.testProperty "iterate" $
     \(Fun _ (f :: Word -> Word)) seed ix ->
