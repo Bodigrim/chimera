@@ -20,7 +20,6 @@ module Data.Chimera
   ( -- * Memoization
     memoize
   , memoizeFix
-  , memoizeFix'
 
   -- * Chimera
   , Chimera
@@ -42,7 +41,6 @@ module Data.Chimera
   -- $monadic
   , tabulateM
   , tabulateFixM
-  , tabulateFixM'
   , iterateM
 
   -- * Subvectors
@@ -226,7 +224,24 @@ tabulateFix :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix uf = runIdentity $ tabulateFixM ((pure .) . uf . (runIdentity .))
 
 -- | Fully memoizing version of 'tabulateFix'.
--- This function will allocate a lot of memory when misused (see 'memoizeFix'').
+-- This function will tabulate every recursive call,
+-- but might allocate a lot of memory in doing so.
+-- For example, the following piece of code calculates the
+-- highest number reached by the collatz sequence
+-- of a given number, but also allocates tens of gigabytes of memory,
+-- because the collatz sequence will spike to very high numbers.
+--
+-- >>> collatzF :: (Word -> Word) -> (Word -> Word)
+-- >>> collatzF _ 0 = 0
+-- >>> collatzF f n = if n <= 2 then 4 else n `max` f (if even n then n `quot` 2 else 3 * n + 1)
+-- >>>
+-- >>> maximumBy (comparing $ index $ tabulateFix' collatzF) [0..1000000]
+-- ...
+--
+-- Using 'memoizeFix' instead fixes the problem:
+--
+-- >>> maximumBy (comparing $ memoizeFix collatzF) [0..1000000]
+-- 56991483520
 tabulateFix' :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix' uf = runIdentity $ tabulateFixM' ((pure .) . uf . (runIdentity .))
 
@@ -391,7 +406,7 @@ memoize = index @V.Vector . tabulate
 -- This function can be used even when arguments
 -- of recursive calls are not strictly decreasing,
 -- but they might not get memoized. If this is not desired
--- use 'memoizeFix'' instead.
+-- use 'tabulateFix'' instead.
 -- For example, here is a routine to measure the length of
 -- <https://oeis.org/A006577 Collatz sequence>:
 --
@@ -400,28 +415,6 @@ memoize = index @V.Vector . tabulate
 -- 111
 memoizeFix :: ((Word -> a) -> Word -> a) -> (Word -> a)
 memoizeFix = index @V.Vector . tabulateFix
-
--- | Fully memoizing version of 'memoizeFix'.
--- This function will memoize every recursive call,
--- but might allocate a lot of memory in doing so.
--- For example, the following piece of code calculates the
--- highest number reached by the collatz sequence
--- of a given number, but also allocates tens of gigabytes of memory,
--- because the collatz sequence will spike to very high numbers.
---
--- >>> collatzF :: (Word -> Word) -> (Word -> Word)
--- >>> collatzF _ 0 = 0
--- >>> collatzF f n = if n <= 2 then 4 else n `max` f (if even n then n `quot` 2 else 3 * n + 1)
--- >>>
--- >>> maximumBy (comparing $ memoizeFix' collatzF) [0..1000000]
--- ...
---
--- Using 'memoizeFix' instead fixes the problem:
---
--- >>> maximumBy (comparing $ memoizeFix collatzF) [0..1000000]
--- 56991483520
-memoizeFix' :: ((Word -> a) -> Word -> a) -> (Word -> a)
-memoizeFix' = index @V.Vector . tabulateFix'
 
 -- | Map subvectors of a stream, using a given length-preserving function.
 mapSubvectors
