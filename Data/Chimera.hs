@@ -58,10 +58,14 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed as U
 
-#if DefineRepresentable
+#ifdef MIN_VERSION_mtl
 import Control.Monad.Reader (MonadReader, ask, local)
+#endif
+#ifdef MIN_VERSION_distributive
 import Data.Distributive
+#ifdef MIN_VERSION_adjunctions
 import qualified Data.Functor.Rep as Rep
+#endif
 #endif
 
 import Data.Chimera.Compat
@@ -143,21 +147,23 @@ instance MonadZip (Chimera V.Vector) where
   mzip as bs = tabulate (\w -> (index as w, index bs w))
   mzipWith f as bs = tabulate $ \w -> f (index as w) (index bs w)
 
-#if DefineRepresentable
-
+#ifdef MIN_VERSION_mtl
 instance MonadReader Word (Chimera V.Vector) where
-  ask = Rep.askRep
-  local = Rep.localRep
+  ask = tabulate id
+  local = flip $ (tabulate .) . (.) . index
+#endif
 
+#ifdef MIN_VERSION_distributive
 instance Distributive (Chimera V.Vector) where
-  distribute = Rep.distributeRep
-  collect = Rep.collectRep
+  distribute = tabulate . flip (fmap . flip index)
+  collect f = tabulate . flip ((<$>) . (. f) . flip index)
 
+#ifdef MIN_VERSION_adjunctions
 instance Rep.Representable (Chimera V.Vector) where
   type Rep (Chimera V.Vector) = Word
   tabulate = tabulate
   index = index
-
+#endif
 #endif
 
 bits :: Int
