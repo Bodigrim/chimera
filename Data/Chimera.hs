@@ -227,9 +227,10 @@ tabulateFix uf = runIdentity $ tabulateFixM ((pure .) . uf . (runIdentity .))
 -- This function will tabulate every recursive call,
 -- but might allocate a lot of memory in doing so.
 -- For example, the following piece of code calculates the
--- highest number reached by the collatz sequence
+-- highest number reached by the
+-- <https://en.wikipedia.org/wiki/Collatz_conjecture#Statement_of_the_problem Collatz sequence>
 -- of a given number, but also allocates tens of gigabytes of memory,
--- because the collatz sequence will spike to very high numbers.
+-- because the Collatz sequence will spike to very high numbers.
 --
 -- >>> collatzF :: (Word -> Word) -> (Word -> Word)
 -- >>> collatzF _ 0 = 0
@@ -254,27 +255,7 @@ tabulateFixM
      (Monad m, G.Vector v a)
   => ((Word -> m a) -> Word -> m a)
   -> m (Chimera v a)
-tabulateFixM f = result
-  where
-    result :: m (Chimera v a)
-    result = Chimera <$> V.generateM (bits + 1) tabulateSubVector
-
-    tabulateSubVector :: Int -> m (v a)
-    tabulateSubVector 0 = G.singleton <$> fix f 0
-    tabulateSubVector i = subResult
-      where
-        subResult      = G.generateM ii (\j -> f fixF (int2word (ii + j)))
-        subResultBoxed = V.generateM ii (\j -> f fixF (int2word (ii + j)))
-        ii = 1 `unsafeShiftL` (i - 1)
-
-        fixF :: Word -> m a
-        fixF k
-          | k < int2word ii
-          = flip index k <$> result
-          | k <= int2word ii `shiftL` 1 - 1
-          = (`V.unsafeIndex` (word2int k - ii)) <$> subResultBoxed
-          | otherwise
-          = f fixF k
+tabulateFixM = tabulateFixM_ Downwards
 
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
@@ -284,13 +265,27 @@ tabulateFixM'
      (Monad m, G.Vector v a)
   => ((Word -> m a) -> Word -> m a)
   -> m (Chimera v a)
-tabulateFixM' f = result
+tabulateFixM' = tabulateFixM_ Full
+
+-- | Memoization strategy, only used by 'tabulateFixM_'.
+data Strategy = Full | Downwards
+
+-- | Internal implementation for 'tabulateFixM' and 'tabulateFixM''.
+tabulateFixM_
+  :: forall m v a.
+     (Monad m, G.Vector v a)
+  => Strategy
+  -> ((Word -> m a) -> Word -> m a)
+  -> m (Chimera v a)
+tabulateFixM_ strat f = result
   where
     result :: m (Chimera v a)
     result = Chimera <$> V.generateM (bits + 1) tabulateSubVector
 
     tabulateSubVector :: Int -> m (v a)
-    tabulateSubVector 0 = G.singleton <$> f (\k -> flip index k <$> result) 0
+    tabulateSubVector 0 = G.singleton <$> case strat of
+      Downwards -> fix f 0
+      Full      -> f (\k -> flip index k <$> result) 0
     tabulateSubVector i = subResult
       where
         subResult      = G.generateM ii (\j -> f fixF (int2word (ii + j)))
@@ -304,7 +299,9 @@ tabulateFixM' f = result
           | k <= int2word ii `shiftL` 1 - 1
           = (`V.unsafeIndex` (word2int k - ii)) <$> subResultBoxed
           | otherwise
-          = flip index k <$> result
+          = case strat of
+              Downwards -> f fixF k
+              Full      -> flip index k <$> result
 
 -- | 'iterate' @f@ @x@ returns an infinite stream
 -- of repeated applications of @f@ to @x@.
