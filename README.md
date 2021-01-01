@@ -1,4 +1,4 @@
-# chimera
+# chimera [![Build Status](https://github.com/Bodigrim/chimera/workflows/ci/badge.svg)](https://github.com/Bodigrim/chimera/actions?query=workflow%3Aci) [![Hackage](http://img.shields.io/hackage/v/chimera.svg)](https://hackage.haskell.org/package/chimera) [![Stackage LTS](http://stackage.org/package/chimera/badge/lts)](http://stackage.org/lts/package/chimera) [![Stackage Nightly](http://stackage.org/package/chimera/badge/nightly)](http://stackage.org/nightly/package/chimera)
 
 Lazy infinite compact streams with cache-friendly O(1) indexing
 and applications for memoization.
@@ -94,6 +94,24 @@ Now create its memoized version for rapid evaluation:
 ```haskell
 isPrime' :: Word -> Bool
 isPrime' = memoizeFix isPrimeF
+```
+
+## Example 3
+
+No manual on memoization is complete
+without Fibonacci numbers:
+
+```haskell
+fibo :: Word -> Integer
+fibo = memoizeFix $ \f n -> if n < 2 then toInteger n else f (n - 1) + f (n - 2)
+```
+
+No cleverness involved: just write a recursive function
+and let `memoizeFix` take care about everything else:
+
+```haskell
+> fibo 100
+354224848179261915075
 ```
 
 ## What about non-`Word` arguments?

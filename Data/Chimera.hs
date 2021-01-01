@@ -386,12 +386,12 @@ memoize = index @V.Vector . tabulate
 -- For example, imagine that we want to memoize
 -- <https://en.wikipedia.org/wiki/Fibonacci_number Fibonacci numbers>:
 --
--- >>> fibo n = if n < 2 then fromIntegral n else fibo (n - 1) + fibo (n - 2)
+-- >>> fibo n = if n < 2 then toInteger n else fibo (n - 1) + fibo (n - 2)
 --
 -- Can we find @fiboF@ such that @fibo@ = 'fix' @fiboF@?
 -- Just replace all recursive calls to @fibo@ with @f@:
 --
--- >>> fiboF f n = if n < 2 then fromIntegral n else f (n - 1) + f (n - 2)
+-- >>> fiboF f n = if n < 2 then toInteger n else f (n - 1) + f (n - 2)
 --
 -- Now we are ready to use 'memoizeFix':
 --
