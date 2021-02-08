@@ -8,7 +8,7 @@ copyright: 2017-2019 Bodigrim
 maintainer: andrew.lelechenko@gmail.com
 homepage: https://github.com/Bodigrim/chimera#readme
 category: Data
-synopsis: Lazy infinite streams with O(1) indexing
+synopsis: Lazy infinite streams with O(1) indexing and applications for memoization
 author: Bodigrim
 extra-source-files:
   README.md
