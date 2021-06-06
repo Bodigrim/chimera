@@ -66,6 +66,7 @@
 --
 
 {-# LANGUAGE BangPatterns  #-}
+{-# LANGUAGE CPP           #-}
 {-# LANGUAGE MagicHash     #-}
 {-# LANGUAGE UnboxedTuples #-}
 
@@ -162,7 +163,7 @@ fromWheel30 i = ((i `shiftL` 2 - i `shiftR` 2) .|. 1)
 --
 -- prop> toWheel210 . fromWheel210 == id
 toWheel210 :: Word -> Word
-toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + W# (indexWord8OffAddr# table# (word2Int# r#))
+toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + W# tableEl#
   where
     !(q, W# r#) = case bits of
       64 -> (q64, r64)
@@ -172,6 +173,12 @@ toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + W# (indexWord8OffAddr# tabl
     !(# z1#, _ #) = timesWord2# m# i#
     q64 = W# z1# `shiftR` 6
     r64 = i - q64 * 210
+
+    tableEl# =
+#if MIN_VERSION_base(4,16,0)
+      word8ToWord#
+#endif
+      (indexWord8OffAddr# table# (word2Int# r#))
 
     table# :: Addr#
     table# = "\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\SOH\SOH\STX\STX\STX\STX\ETX\ETX\EOT\EOT\EOT\EOT\ENQ\ENQ\ENQ\ENQ\ENQ\ENQ\ACK\ACK\a\a\a\a\a\a\b\b\b\b\t\t\n\n\n\n\v\v\v\v\v\v\f\f\f\f\f\f\r\r\SO\SO\SO\SO\SO\SO\SI\SI\SI\SI\DLE\DLE\DC1\DC1\DC1\DC1\DC1\DC1\DC2\DC2\DC2\DC2\DC3\DC3\DC3\DC3\DC3\DC3\DC4\DC4\DC4\DC4\DC4\DC4\DC4\DC4\NAK\NAK\NAK\NAK\SYN\SYN\ETB\ETB\ETB\ETB\CAN\CAN\EM\EM\EM\EM\SUB\SUB\SUB\SUB\SUB\SUB\SUB\SUB\ESC\ESC\ESC\ESC\ESC\ESC\FS\FS\FS\FS\GS\GS\GS\GS\GS\GS\RS\RS\US\US\US\US      !!\"\"\"\"\"\"######$$$$%%&&&&''''''(())))))****++,,,,--........../"#
@@ -187,7 +194,7 @@ toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + W# (indexWord8OffAddr# tabl
 -- >>> map fromWheel210 [0..9]
 -- [1,11,13,17,19,23,29,31,37,41]
 fromWheel210 :: Word -> Word
-fromWheel210 i@(W# i#) = q * 210 + W# (indexWord8OffAddr# table# (word2Int# r#))
+fromWheel210 i@(W# i#) = q * 210 + W# tableEl#
   where
     !(q, W# r#) = case bits of
       64 -> (q64, r64)
@@ -197,6 +204,12 @@ fromWheel210 i@(W# i#) = q * 210 + W# (indexWord8OffAddr# table# (word2Int# r#))
     !(# z1#, _ #) = timesWord2# m# i#
     q64 = W# z1# `shiftR` 5
     r64 = i - q64 `shiftL` 5 - q64 `shiftL` 4
+
+    tableEl# =
+#if MIN_VERSION_base(4,16,0)
+      word8ToWord#
+#endif
+      (indexWord8OffAddr# table# (word2Int# r#))
 
     table# :: Addr#
     table# = "\SOH\v\r\DC1\DC3\ETB\GS\US%)+/5;=CGIOSYaegkmqy\DEL\131\137\139\143\149\151\157\163\167\169\173\179\181\187\191\193\197\199\209"#
