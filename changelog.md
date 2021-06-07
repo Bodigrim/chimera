@@ -1,3 +1,8 @@
+# 0.3.2.0
+
+* Implement `tabulateFix'`.
+* Compatibility fixes.
+
 # 0.3.1.0
 
 * Define `Monad`, `MonadFix`, `MonadZip` instances.
