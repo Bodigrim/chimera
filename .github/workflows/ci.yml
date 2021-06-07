@@ -42,10 +42,15 @@ jobs:
         cabal sdist -z -o .
         cabal get chimera-*.tar.gz
         cd chimera-*/
-        cabal build -f-representable all
-        cabal build all
+        bld() { cabal build -f-representable; }
+        bld || bld || bld
+        bld() { cabal build; }
+        bld || bld || bld
     - name: Test
-      run: cabal test --test-show-details=direct
+      run: |
+        bld() { cabal build chimera:tests; }
+        bld || bld || bld
+        cabal test --test-show-details=direct
     - name: Bench
       run: cabal bench --benchmark-options=-l
     - name: Haddock
