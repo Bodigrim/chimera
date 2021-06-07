@@ -1,4 +1,4 @@
-# chimera [![Build Status](https://github.com/Bodigrim/chimera/workflows/ci/badge.svg)](https://github.com/Bodigrim/chimera/actions?query=workflow%3Aci) [![Hackage](http://img.shields.io/hackage/v/chimera.svg)](https://hackage.haskell.org/package/chimera) [![Stackage LTS](http://stackage.org/package/chimera/badge/lts)](http://stackage.org/lts/package/chimera) [![Stackage Nightly](http://stackage.org/package/chimera/badge/nightly)](http://stackage.org/nightly/package/chimera)
+# chimera [![Hackage](http://img.shields.io/hackage/v/chimera.svg)](https://hackage.haskell.org/package/chimera) [![Stackage LTS](http://stackage.org/package/chimera/badge/lts)](http://stackage.org/lts/package/chimera) [![Stackage Nightly](http://stackage.org/package/chimera/badge/nightly)](http://stackage.org/nightly/package/chimera)
 
 Lazy infinite compact streams with cache-friendly O(1) indexing
 and applications for memoization.

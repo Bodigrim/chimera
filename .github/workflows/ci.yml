@@ -16,7 +16,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest]
-        ghc: ['8.0', '8.2', '8.4', '8.6', '8.8', '8.10']
+        ghc: ['8.0', '8.2', '8.4', '8.6', '8.8', '8.10', '9.0']
         include:
         - os: windows-latest
           ghc: 'latest'
@@ -24,7 +24,7 @@ jobs:
           ghc: 'latest'
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-haskell@v1
+    - uses: haskell/actions/setup@v1
       id: setup-haskell-cabal
       with:
         ghc-version: ${{ matrix.ghc }}
