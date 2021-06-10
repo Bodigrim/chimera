@@ -10,8 +10,8 @@ import Test.Tasty.HUnit as H
 import Test.Tasty.QuickCheck as QC
 
 import Data.Bits
+import Data.Foldable
 import Data.Function (fix)
-import Data.List
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed as U
 
