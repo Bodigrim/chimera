@@ -4,7 +4,7 @@ module Main where
 
 import Control.Monad.State (evalState, put, get)
 import Data.Chimera
-import Gauge.Main
+import Test.Tasty.Bench
 import System.Random
 
 #ifdef MIN_VERSION_ral
@@ -15,11 +15,11 @@ sizes :: Num a => [a]
 sizes = [100, 200, 500, 1000]
 
 main :: IO ()
-main = defaultMain
-  [ bgroup "read/Chimera" (map benchReadChimera sizes)
-  , bgroup "read/List"    (map benchReadList    sizes)
+main = defaultMain $ (: []) $ bgroup "read"
+  [ bgroup "Chimera" (map benchReadChimera sizes)
+  , bgroup "List"    (map benchReadList    sizes)
 #ifdef MIN_VERSION_ral
-  , bgroup "read/RAL"     (map benchReadRAL     sizes)
+  , bgroup "RAL"     (map benchReadRAL     sizes)
 #endif
   ]
 
@@ -53,7 +53,8 @@ benchReadChimera n
 
 benchReadList :: Int -> Benchmark
 benchReadList n
-  = bench (show n)
+  = bcompare ("$NF == \"" ++ show n ++ "\" && $(NF-1) == \"Chimera\"")
+  $ bench (show n)
   $ nf (sum . map (randomList !!))
   $ map (`mod` n)
   $ take n randomIndicesInt
@@ -61,7 +62,8 @@ benchReadList n
 #ifdef MIN_VERSION_ral
 benchReadRAL :: Int -> Benchmark
 benchReadRAL n
-  = bench (show n)
+  = bcompare ("$NF == \"" ++ show n ++ "\" && $(NF-1) == \"Chimera\"")
+  $ bench (show n)
   $ nf (sum . map (randomRAL RAL.!))
   $ map (`mod` n)
   $ take n randomIndicesInt
