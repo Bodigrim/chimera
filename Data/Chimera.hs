@@ -350,7 +350,7 @@ index (Chimera vs) i =
 toList :: G.Vector v a => Chimera v a -> [a]
 toList (Chimera vs) = foldMap G.toList vs
 
--- | Return an infinite repetion of a given vector.
+-- | Return an infinite repetition of a given vector.
 -- Throw an error on an empty vector.
 --
 -- >>> ch = cycle (Data.Vector.fromList [4, 2]) :: VChimera Int
