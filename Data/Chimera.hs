@@ -50,6 +50,7 @@ module Data.Chimera
   -- * Subvectors
   -- $subvectors
   , mapSubvectors
+  , traverseSubvectors
   , zipSubvectors
   , sliceSubvectors
   ) where
@@ -499,7 +500,24 @@ mapSubvectors
   => (u a -> v b)
   -> Chimera u a
   -> Chimera v b
-mapSubvectors f (Chimera bs) = Chimera (fmap f bs)
+mapSubvectors f = runIdentity . traverseSubvectors (pure . f)
+
+-- | Traverse subvectors of a stream, using a given length-preserving function.
+--
+-- Be careful, because similar to 'tabulateM', only lazy monadic effects can
+-- be executed in a finite time: lazy state monad is fine, but strict one is
+-- not.
+--
+traverseSubvectors
+  :: (G.Vector u a, G.Vector v b, Applicative m)
+  => (u a -> m (v b))
+  -> Chimera u a
+  -> m (Chimera v b)
+traverseSubvectors f (Chimera bs) = Chimera <$> traverse safeF bs
+  where
+    -- Computing vector length is cheap, so let's check that @f@ preserves length.
+    safeF x = (\fx -> if G.length x == G.length fx then fx else
+        error "traverseSubvectors: the function is not length-preserving") <$> f x
 
 -- | Zip subvectors from two streams, using a given length-preserving function.
 zipSubvectors
@@ -508,7 +526,12 @@ zipSubvectors
   -> Chimera u a
   -> Chimera v b
   -> Chimera w c
-zipSubvectors f (Chimera bs1) (Chimera bs2) = Chimera (mzipWith f bs1 bs2)
+zipSubvectors f (Chimera bs1) (Chimera bs2) = Chimera (mzipWith safeF bs1 bs2)
+  where
+    -- Computing vector length is cheap, so let's check that @f@ preserves length.
+    safeF x y = let fxy = f x y in
+      if G.length x == G.length fxy then fxy else
+        error "zipSubvectors: the function is not length-preserving"
 
 -- | Take a slice of 'Chimera', represented as a list on consecutive subvectors.
 sliceSubvectors
