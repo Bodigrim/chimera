@@ -55,6 +55,7 @@ import Control.Monad.Fix
 import Control.Monad.Zip
 import Data.Bits
 import Data.Functor.Identity
+import qualified Data.Primitive.Array as A
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed as U
@@ -121,7 +122,7 @@ import Data.Chimera.FromIntegral
 -- Use 'tabulate', 'tabulateFix', etc. to create a stream
 -- and 'index' to access its arbitrary elements
 -- in constant time.
-newtype Chimera v a = Chimera { _unChimera :: V.Vector (v a) }
+newtype Chimera v a = Chimera { _unChimera :: A.Array (v a) }
   deriving (Functor, Foldable, Traversable)
 
 -- | Streams backed by boxed vectors.
@@ -181,13 +182,17 @@ bits = fbs (0 :: Word)
 tabulate :: G.Vector v a => (Word -> a) -> Chimera v a
 tabulate f = runIdentity $ tabulateM (pure . f)
 
+-- | Similar to 'V.generateM', but for raw arrays.
+generateArrayM :: Monad m => Int -> (Int -> m a) -> m (A.Array a)
+generateArrayM n f = A.arrayFromListN n <$> traverse f [0..n - 1]
+
 -- | Monadic version of 'tabulate'.
 tabulateM
   :: forall m v a.
      (Monad m, G.Vector v a)
   => (Word -> m a)
   -> m (Chimera v a)
-tabulateM f = Chimera <$> V.generateM (bits + 1) tabulateSubVector
+tabulateM f = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
   where
     tabulateSubVector :: Int -> m (v a)
     tabulateSubVector 0 = G.singleton <$> f 0
@@ -280,7 +285,7 @@ tabulateFixM_
 tabulateFixM_ strat f = result
   where
     result :: m (Chimera v a)
-    result = Chimera <$> V.generateM (bits + 1) tabulateSubVector
+    result = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
 
     tabulateSubVector :: Int -> m (v a)
     tabulateSubVector 0 = G.singleton <$> case strat of
@@ -312,13 +317,23 @@ tabulateFixM_ strat f = result
 iterate :: G.Vector v a => (a -> a) -> a -> Chimera v a
 iterate f = runIdentity . iterateM (pure . f)
 
+-- | Similar to 'G.iterateNM'.
+iterateListNM :: forall a m. Monad m => Int -> (a -> m a) -> a -> m [a]
+iterateListNM n f = if n <= 0 then const (pure []) else go (n - 1)
+  where
+    go :: Int -> a -> m [a]
+    go 0 s = pure [s]
+    go k s = do
+      fs <- f s
+      (s :) <$> go (k - 1) fs
+
 -- | Monadic version of 'iterate'.
 iterateM :: forall m v a. (Monad m, G.Vector v a) => (a -> m a) -> a -> m (Chimera v a)
 iterateM f seed = do
   nextSeed <- f seed
   let z = G.singleton seed
-  zs <- V.iterateNM bits go (G.singleton nextSeed)
-  pure $ Chimera $ z `V.cons` zs
+  zs <- iterateListNM bits go (G.singleton nextSeed)
+  pure $ Chimera $ A.fromListN (bits + 1) (z : zs)
   where
     go :: v a -> m (v a)
     go vec = do
@@ -334,7 +349,7 @@ iterateM f seed = do
 -- 81
 index :: G.Vector v a => Chimera v a -> Word -> a
 index (Chimera vs) i =
-  (vs `V.unsafeIndex` (fbs i - lz))
+  (vs `A.indexArray` (fbs i - lz))
   `G.unsafeIndex`
   word2int (i .&. complement ((1 `shiftL` (fbs i - 1)) `unsafeShiftR` lz))
   where
