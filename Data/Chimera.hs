@@ -11,8 +11,10 @@
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 
@@ -32,6 +34,8 @@ module Data.Chimera
   , tabulateFix'
   , iterate
   , cycle
+  , fromListWithDef
+  , fromVectorWithDef
 
   -- * Elimination
   , index
@@ -47,6 +51,7 @@ module Data.Chimera
   -- $subvectors
   , mapSubvectors
   , zipSubvectors
+  , sliceSubvectors
   ) where
 
 import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
@@ -54,6 +59,7 @@ import Control.Applicative
 import Control.Monad.Fix
 import Control.Monad.Zip
 import Data.Bits
+import qualified Data.Foldable as F
 import Data.Functor.Identity
 import qualified Data.Primitive.Array as A
 import qualified Data.Vector as V
@@ -122,7 +128,7 @@ import Data.Chimera.FromIntegral
 -- Use 'tabulate', 'tabulateFix', etc. to create a stream
 -- and 'index' to access its arbitrary elements
 -- in constant time.
-newtype Chimera v a = Chimera { _unChimera :: A.Array (v a) }
+newtype Chimera v a = Chimera { unChimera :: A.Array (v a) }
   deriving (Functor, Foldable, Traversable)
 
 -- | Streams backed by boxed vectors.
@@ -133,7 +139,8 @@ type UChimera = Chimera U.Vector
 
 -- | 'pure' creates a constant stream.
 instance Applicative (Chimera V.Vector) where
-  pure   = tabulate   . const
+  pure a = Chimera $ A.arrayFromListN (bits + 1) $
+    G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
   (<*>)  = zipSubvectors (<*>)
 #if __GLASGOW_HASKELL__ > 801
   liftA2 f = zipSubvectors (liftA2 f)
@@ -146,8 +153,8 @@ instance MonadFix (Chimera V.Vector) where
   mfix = tabulate . mfix . fmap index
 
 instance MonadZip (Chimera V.Vector) where
-  mzip as bs = tabulate (\w -> (index as w, index bs w))
-  mzipWith f as bs = tabulate $ \w -> f (index as w) (index bs w)
+  mzip = zipSubvectors mzip
+  mzipWith = zipSubvectors . mzipWith
 
 #ifdef MIN_VERSION_mtl
 instance MonadReader Word (Chimera V.Vector) where
@@ -349,9 +356,9 @@ iterateM f seed = do
 -- 81
 index :: G.Vector v a => Chimera v a -> Word -> a
 index (Chimera vs) i =
-  (vs `A.indexArray` (fbs i - lz))
+  (vs `A.indexArray` (bits - lz))
   `G.unsafeIndex`
-  word2int (i .&. complement ((1 `shiftL` (fbs i - 1)) `unsafeShiftR` lz))
+  word2int (i .&. complement ((1 `shiftL` (bits - 1)) `unsafeShiftR` lz))
   where
     lz :: Int
     !lz = word2int (clz i)
@@ -364,6 +371,64 @@ index (Chimera vs) i =
 -- [0,1,4,9,16,25,36,49,64,81]
 toList :: G.Vector v a => Chimera v a -> [a]
 toList (Chimera vs) = foldMap G.toList vs
+
+measureOff :: Int -> [a] -> Either Int ([a], [a])
+measureOff n
+  | n <= 0 = Right . ([], )
+  | otherwise = go n
+  where
+    go m [] = Left m
+    go 1 (x : xs) = Right ([x], xs)
+    go m (x : xs) = case go (m - 1) xs of
+      l@Left{} -> l
+      Right (xs', xs'') -> Right (x : xs', xs'')
+
+measureOffVector :: G.Vector v a => Int -> v a -> Either Int (v a, v a)
+measureOffVector n xs
+  | n <= l = Right (G.splitAt n xs)
+  | otherwise = Left (n - l)
+  where
+    l = G.length xs
+
+-- | Create a stream of values from a given prefix, followed by default value
+-- afterwards.
+fromListWithDef
+  :: G.Vector v a
+  => a   -- ^ Default value
+  -> [a] -- ^ Prefix
+  -> Chimera v a
+fromListWithDef a = Chimera . A.fromListN (bits + 1) . go0
+  where
+    go0 = \case
+      [] -> G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
+      x : xs -> G.singleton x : go 0 xs
+
+    go k xs = case measureOff kk xs of
+      Left l -> G.fromListN kk (xs ++ replicate l a) :
+        map (\n -> G.replicate (1 `shiftL` n) a) [k + 1 .. bits - 1]
+      Right (ys, zs) -> G.fromListN kk ys : go (k + 1) zs
+      where
+        kk = 1 `shiftL` k
+
+-- | Create a stream of values from a given prefix, followed by default value
+-- afterwards.
+fromVectorWithDef
+  :: G.Vector v a
+  => a   -- ^ Default value
+  -> v a -- ^ Prefix
+  -> Chimera v a
+fromVectorWithDef a = Chimera . A.fromListN (bits + 1) . go0
+  where
+    go0 xs = case G.uncons xs of
+      Nothing -> G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
+      Just (y, ys) -> G.singleton y : go 0 ys
+
+    go k xs = case measureOffVector kk xs of
+      Left l -> (xs G.++ G.replicate l a) :
+        map (\n -> G.replicate (1 `shiftL` n) a) [k + 1 .. bits - 1]
+      Right (ys, zs) -> ys : go (k + 1) zs
+      where
+        kk = 1 `shiftL` k
 
 -- | Return an infinite repetition of a given vector.
 -- Throw an error on an empty vector.
@@ -444,3 +509,28 @@ zipSubvectors
   -> Chimera v b
   -> Chimera w c
 zipSubvectors f (Chimera bs1) (Chimera bs2) = Chimera (mzipWith f bs1 bs2)
+
+-- | Take a slice of 'Chimera', represented as a list on consecutive subvectors.
+sliceSubvectors
+  :: G.Vector v a
+  => Int -- ^ How many initial elements to drop?
+  -> Int -- ^ How many subsequent elements to take?
+  -> Chimera v a
+  -> [v a]
+sliceSubvectors off len = doTake len . doDrop off . F.toList . unChimera
+  where
+    doTake !_ [] = []
+    doTake n (x : xs)
+      | n <= 0 = []
+      | n >= l = x : doTake (n - l) xs
+      | otherwise = [G.take n x]
+      where
+        l = G.length x
+
+    doDrop !_ [] = []
+    doDrop n (x : xs)
+      | n <= 0 = x : xs
+      | l <= n = doDrop (n - l) xs
+      | otherwise = G.drop n x : xs
+      where
+        l = G.length x

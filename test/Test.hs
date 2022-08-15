@@ -13,10 +13,10 @@ import Data.Bits
 import Data.Foldable
 import Data.Function (fix)
 import qualified Data.Vector.Generic as G
-import qualified Data.Vector.Unboxed as U
 
 import Data.Chimera.ContinuousMapping
 import Data.Chimera.WheelMapping
+import Data.Chimera (UChimera, VChimera)
 import qualified Data.Chimera as Ch
 
 instance (G.Vector v a, Arbitrary a) => Arbitrary (Ch.Chimera v a) where
@@ -72,40 +72,77 @@ chimeraTests = testGroup "Chimera"
   [ QC.testProperty "index . tabulate = id" $
     \(Fun _ (f :: Word -> Bool)) ix ->
       let jx = ix `mod` 65536 in
-        f jx === Ch.index (Ch.tabulate f :: Ch.Chimera U.Vector Bool) jx
+        f jx === Ch.index (Ch.tabulate f :: UChimera Bool) jx
+
+  , QC.testProperty "memoize = id" $
+    \(Fun _ (f :: Word -> Bool)) ix ->
+      let jx = ix `mod` 65536 in
+        f jx === Ch.memoize f jx
 
   , QC.testProperty "index . tabulateFix = fix" $
     \(Fun _ g) ix ->
       let jx = ix `mod` 65536 in
         let f = mkUnfix g in
-          fix f jx === Ch.index (Ch.tabulateFix f :: Ch.Chimera U.Vector Bool) jx
+          fix f jx === Ch.index (Ch.tabulateFix f :: UChimera Bool) jx
 
   , QC.testProperty "index . tabulateFix' = fix" $
     \(Fun _ g) ix ->
       let jx = ix `mod` 65536 in
         let f = mkUnfix g in
-          fix f jx === Ch.index (Ch.tabulateFix' f :: Ch.Chimera U.Vector Bool) jx
+          fix f jx === Ch.index (Ch.tabulateFix' f :: UChimera Bool) jx
+
+  , QC.testProperty "memoizeFix = fix" $
+    \(Fun _ g) ix ->
+      let jx = ix `mod` 65536 in
+        let f = mkUnfix g in
+          fix f jx === Ch.memoizeFix f jx
 
   , QC.testProperty "iterate" $
     \(Fun _ (f :: Word -> Word)) seed ix ->
       let jx = ix `mod` 65536 in
-        iterate f seed !! fromIntegral jx === Ch.index (Ch.iterate f seed :: Ch.Chimera U.Vector Word) jx
+        iterate f seed !! fromIntegral jx === Ch.index (Ch.iterate f seed :: UChimera Word) jx
+
+  , QC.testProperty "pure" $
+    \x ix ->
+      let jx = ix `mod` 65536 in
+        x === Ch.index (pure x :: VChimera Word) jx
 
   , QC.testProperty "cycle" $
     \xs ix -> not (null xs) ==>
       let jx = ix `mod` 65536 in
-        let vs = U.fromList xs :: U.Vector Bool in
-          vs U.! (fromIntegral jx `mod` U.length vs) === Ch.index (Ch.cycle vs) jx
+        let vs = G.fromList xs in
+          vs G.! (fromIntegral jx `mod` G.length vs) === Ch.index (Ch.cycle vs :: UChimera Bool) jx
+
+  , QC.testProperty "toList" $
+    \x xs -> xs === take (length xs) (Ch.toList (Ch.fromListWithDef x xs :: UChimera Bool))
+
+  , QC.testProperty "fromListWithDef" $
+    \x xs ix ->
+      let jx = ix `mod` 65536 in
+        (if fromIntegral jx < length xs then xs !! fromIntegral jx else x) ===
+          Ch.index (Ch.fromListWithDef x xs :: UChimera Bool) jx
+
+  , QC.testProperty "fromVectorWithDef" $
+    \x xs ix ->
+      let jx = ix `mod` 65536 in
+        let vs = G.fromList xs in
+          (if fromIntegral jx < length xs then vs G.! fromIntegral jx else x) ===
+            Ch.index (Ch.fromVectorWithDef x vs :: UChimera Bool) jx
 
   , QC.testProperty "mapWithKey" $
     \(Blind bs) (Fun _ (g :: Word -> Word)) ix ->
       let jx = ix `mod` 65536 in
-        g (Ch.index bs jx) === Ch.index (Ch.mapSubvectors (G.map g) bs :: Ch.Chimera U.Vector Word) jx
+        g (Ch.index bs jx) === Ch.index (Ch.mapSubvectors (G.map g) bs :: UChimera Word) jx
 
   , QC.testProperty "zipWithKey" $
     \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Word) -> Word)) ix ->
       let jx = ix `mod` 65536 in
-        g (Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipSubvectors (G.zipWith (curry g)) bs1 bs2 :: Ch.Chimera U.Vector Word) jx
+        g (Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipSubvectors (G.zipWith (curry g)) bs1 bs2 :: UChimera Word) jx
+
+  , QC.testProperty "sliceSubvectors" $
+    \x xs ix ->
+      let vs = G.fromList xs in
+        fold (Ch.sliceSubvectors ix (G.length vs - max 0 ix) (Ch.fromVectorWithDef x vs :: UChimera Bool)) === G.drop ix vs
   ]
 
 -------------------------------------------------------------------------------
