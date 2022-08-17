@@ -1,3 +1,9 @@
+# 0.3.3.0
+
+* Add `fromListWithDef`, `fromVectorWithDef`, `interleave`.
+* Add `sliceSubvectors`, `traverseSubvectors`, `zipWithSubvectors` and `zipWithMSubvectors`.
+* Deprecate `zipSubvectors` in favor of `zipWithSubvectors`.
+
 # 0.3.2.0
 
 * Implement `tabulateFix'`.
@@ -17,6 +23,7 @@
 * Implement `mapSubvectors` and `zipSubvectors`
 * Make boxed `tabulateFix` even lazier.
 * Speed up `Data.Chimera.WheelMapping`.
+* Remove `mapWithKey`, `traverseWithKey`, `zipWithKey`, `zipWithKeyM`.
 
 # 0.2.0.0
 

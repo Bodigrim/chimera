@@ -134,16 +134,28 @@ import Data.Chimera.FromIntegral
 -- Use 'tabulate', 'tabulateFix', etc. to create a stream
 -- and 'index' to access its arbitrary elements
 -- in constant time.
+--
+-- @since 0.2.0.0
 newtype Chimera v a = Chimera { unChimera :: A.Array (v a) }
-  deriving (Functor, Foldable, Traversable)
+  deriving
+  ( Functor     -- ^ @since 0.2.0.0
+  , Foldable    -- ^ @since 0.2.0.0
+  , Traversable -- ^ @since 0.2.0.0
+  )
 
 -- | Streams backed by boxed vectors.
+--
+-- @since 0.3.0.0
 type VChimera = Chimera V.Vector
 
 -- | Streams backed by unboxed vectors.
+--
+-- @since 0.3.0.0
 type UChimera = Chimera U.Vector
 
 -- | 'pure' creates a constant stream.
+--
+-- @since 0.2.0.0
 instance Applicative (Chimera V.Vector) where
   pure a = Chimera $ A.arrayFromListN (bits + 1) $
     G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
@@ -152,28 +164,34 @@ instance Applicative (Chimera V.Vector) where
   liftA2 f = zipWithSubvectors (liftA2 f)
 #endif
 
+-- | @since 0.3.1.0
 instance Monad (Chimera V.Vector) where
   m >>= f = tabulate $ \w -> index (f (index m w)) w
 
+-- | @since 0.3.1.0
 instance MonadFix (Chimera V.Vector) where
   mfix = tabulate . mfix . fmap index
 
+-- | @since 0.3.1.0
 instance MonadZip (Chimera V.Vector) where
   mzip = zipWithSubvectors mzip
   mzipWith = zipWithSubvectors . mzipWith
 
 #ifdef MIN_VERSION_mtl
+-- | @since 0.3.1.0
 instance MonadReader Word (Chimera V.Vector) where
   ask = tabulate id
   local = flip $ (tabulate .) . (.) . index
 #endif
 
 #ifdef MIN_VERSION_distributive
+-- | @since 0.3.1.0
 instance Distributive (Chimera V.Vector) where
   distribute = tabulate . flip (fmap . flip index)
   collect f = tabulate . flip ((<$>) . (. f) . flip index)
 
 #ifdef MIN_VERSION_adjunctions
+-- | @since 0.3.1.0
 instance Rep.Representable (Chimera V.Vector) where
   type Rep (Chimera V.Vector) = Word
   tabulate = tabulate
@@ -192,6 +210,8 @@ bits = fbs (0 :: Word)
 -- 81
 -- >>> take 10 (toList ch)
 -- [0,1,4,9,16,25,36,49,64,81]
+--
+-- @since 0.2.0.0
 tabulate :: G.Vector v a => (Word -> a) -> Chimera v a
 tabulate f = runIdentity $ tabulateM (pure . f)
 
@@ -200,6 +220,8 @@ generateArrayM :: Monad m => Int -> (Int -> m a) -> m (A.Array a)
 generateArrayM n f = A.arrayFromListN n <$> traverse f [0..n - 1]
 
 -- | Monadic version of 'tabulate'.
+--
+-- @since 0.2.0.0
 tabulateM
   :: forall m v a.
      (Monad m, G.Vector v a)
@@ -238,6 +260,8 @@ tabulateM f = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
 --
 -- __Note__: Only recursive function calls with decreasing arguments are memoized.
 -- If full memoization is desired, use 'tabulateFix'' instead.
+--
+-- @since 0.2.0.0
 tabulateFix :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix uf = runIdentity $ tabulateFixM ((pure .) . uf . (runIdentity .))
 
@@ -261,6 +285,8 @@ tabulateFix uf = runIdentity $ tabulateFixM ((pure .) . uf . (runIdentity .))
 --
 -- >>> maximumBy (comparing $ memoizeFix collatzF) [0..1000000]
 -- 56991483520
+--
+-- @since 0.3.2.0
 tabulateFix' :: G.Vector v a => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix' uf = runIdentity $ tabulateFixM' ((pure .) . uf . (runIdentity .))
 
@@ -268,6 +294,8 @@ tabulateFix' uf = runIdentity $ tabulateFixM' ((pure .) . uf . (runIdentity .))
 -- There are no particular guarantees about the order of recursive calls:
 -- they may be executed more than once or executed in different order.
 -- That said, monadic effects must be idempotent and commutative.
+--
+-- @since 0.2.0.0
 tabulateFixM
   :: forall m v a.
      (Monad m, G.Vector v a)
@@ -329,6 +357,8 @@ tabulateFixM_ strat f = result
 -- >>> ch = iterate (+ 1) 0 :: UChimera Int
 -- >>> take 10 (toList ch)
 -- [0,1,2,3,4,5,6,7,8,9]
+--
+-- @since 0.3.0.0
 iterate :: G.Vector v a => (a -> a) -> a -> Chimera v a
 iterate f = runIdentity . iterateM (pure . f)
 
@@ -343,6 +373,8 @@ iterateListNM n f = if n <= 0 then const (pure []) else go (n - 1)
       (s :) <$> go (k - 1) fs
 
 -- | Monadic version of 'iterate'.
+--
+-- @since 0.3.0.0
 iterateM :: forall m v a. (Monad m, G.Vector v a) => (a -> m a) -> a -> m (Chimera v a)
 iterateM f seed = do
   nextSeed <- f seed
@@ -368,6 +400,7 @@ interleaveVec as bs = G.generate (G.length as `shiftL` 1)
 -- >>> take 10 (toList ch)
 -- [0,100,1,101,2,102,3,103,4,104]
 --
+-- @since 0.3.3.0
 interleave :: G.Vector v a => Chimera v a -> Chimera v a -> Chimera v a
 interleave (Chimera as) (Chimera bs) = Chimera $ A.arrayFromListN (bits + 1) vecs
   where
@@ -379,6 +412,8 @@ interleave (Chimera as) (Chimera bs) = Chimera $ A.arrayFromListN (bits + 1) vec
 -- >>> ch = tabulate (^ 2) :: UChimera Word
 -- >>> index ch 9
 -- 81
+--
+-- @since 0.2.0.0
 index :: G.Vector v a => Chimera v a -> Word -> a
 index (Chimera vs) i =
   (vs `A.indexArray` (bits - lz))
@@ -394,6 +429,8 @@ index (Chimera vs) i =
 -- >>> ch = tabulate (^ 2) :: UChimera Word
 -- >>> take 10 (toList ch)
 -- [0,1,4,9,16,25,36,49,64,81]
+--
+-- @since 0.3.0.0
 toList :: G.Vector v a => Chimera v a -> [a]
 toList (Chimera vs) = foldMap G.toList vs
 
@@ -417,6 +454,8 @@ measureOffVector n xs
 
 -- | Create a stream of values from a given prefix, followed by default value
 -- afterwards.
+--
+-- @since 0.3.3.0
 fromListWithDef
   :: G.Vector v a
   => a   -- ^ Default value
@@ -437,6 +476,8 @@ fromListWithDef a = Chimera . A.fromListN (bits + 1) . go0
 
 -- | Create a stream of values from a given prefix, followed by default value
 -- afterwards.
+--
+-- @since 0.3.3.0
 fromVectorWithDef
   :: G.Vector v a
   => a   -- ^ Default value
@@ -461,6 +502,8 @@ fromVectorWithDef a = Chimera . A.fromListN (bits + 1) . go0
 -- >>> ch = cycle (Data.Vector.fromList [4, 2]) :: VChimera Int
 -- >>> take 10 (toList ch)
 -- [4,2,4,2,4,2,4,2,4,2]
+--
+-- @since 0.3.0.0
 cycle :: G.Vector v a => v a -> Chimera v a
 cycle vec = case l of
   0 -> error "Data.Chimera.cycle: empty list"
@@ -477,6 +520,8 @@ cycle vec = case l of
 -- 'index' ('tabulate' @f@ :: 'UChimera' @a@).
 --
 -- prop> memoize f n = f n
+--
+-- @since 0.3.0.0
 memoize :: (Word -> a) -> (Word -> a)
 memoize = index @V.Vector . tabulate
 
@@ -515,10 +560,14 @@ memoize = index @V.Vector . tabulate
 -- >>> collatzF f n = if n <= 1 then 0 else 1 + f (if even n then n `quot` 2 else 3 * n + 1)
 -- >>> memoizeFix collatzF 27
 -- 111
+--
+-- @since 0.3.0.0
 memoizeFix :: ((Word -> a) -> Word -> a) -> (Word -> a)
 memoizeFix = index @V.Vector . tabulateFix
 
 -- | Map subvectors of a stream, using a given length-preserving function.
+--
+-- @since 0.3.0.0
 mapSubvectors
   :: (G.Vector u a, G.Vector v b)
   => (u a -> v b)
@@ -532,6 +581,7 @@ mapSubvectors f = runIdentity . traverseSubvectors (pure . f)
 -- be executed in a finite time: lazy state monad is fine, but strict one is
 -- not.
 --
+-- @since 0.3.3.0
 traverseSubvectors
   :: (G.Vector u a, G.Vector v b, Applicative m)
   => (u a -> m (v b))
@@ -545,11 +595,14 @@ traverseSubvectors f (Chimera bs) = Chimera <$> traverse safeF bs
 
 {-# SPECIALIZE traverseSubvectors :: (G.Vector u a, G.Vector v b) => (u a -> Identity (v b)) -> Chimera u a -> Identity (Chimera v b)  #-}
 
+-- | @since 0.3.0.0
 zipSubvectors :: (G.Vector u a, G.Vector v b, G.Vector w c) => (u a -> v b -> w c) -> Chimera u a -> Chimera v b -> Chimera w c
 zipSubvectors = zipWithSubvectors
 {-# DEPRECATED zipSubvectors "Use zipWithSubvectors instead" #-}
 
 -- | Zip subvectors from two streams, using a given length-preserving function.
+--
+-- @since 0.3.3.0
 zipWithSubvectors
   :: (G.Vector u a, G.Vector v b, G.Vector w c)
   => (u a -> v b -> w c)
@@ -560,6 +613,8 @@ zipWithSubvectors f = (runIdentity .) . zipWithMSubvectors ((pure .) . f)
 
 -- | Zip subvectors from two streams, using a given monadic length-preserving function.
 -- Caveats for 'tabulateM' and 'traverseSubvectors' apply.
+--
+-- @since 0.3.3.0
 zipWithMSubvectors
   :: (G.Vector u a, G.Vector v b, G.Vector w c, Applicative m)
   => (u a -> v b -> m (w c))
@@ -575,6 +630,8 @@ zipWithMSubvectors f (Chimera bs1) (Chimera bs2) = Chimera <$> sequenceA (mzipWi
 {-# SPECIALIZE zipWithMSubvectors :: (G.Vector u a, G.Vector v b, G.Vector w c) => (u a -> v b -> Identity (w c)) -> Chimera u a -> Chimera v b -> Identity (Chimera w c) #-}
 
 -- | Take a slice of 'Chimera', represented as a list on consecutive subvectors.
+--
+-- @since 0.3.3.0
 sliceSubvectors
   :: G.Vector v a
   => Int -- ^ How many initial elements to drop?

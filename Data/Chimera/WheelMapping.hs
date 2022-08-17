@@ -91,6 +91,8 @@ bits = fbs (0 :: Word)
 -- | Left inverse for 'fromWheel2'. Monotonically non-decreasing function.
 --
 -- prop> toWheel2 . fromWheel2 == id
+--
+-- @since 0.2.0.0
 toWheel2 :: Word -> Word
 toWheel2 i = i `shiftR` 1
 {-# INLINE toWheel2 #-}
@@ -102,6 +104,8 @@ toWheel2 i = i `shiftR` 1
 --
 -- >>> map fromWheel2 [0..9]
 -- [1,3,5,7,9,11,13,15,17,19]
+--
+-- @since 0.2.0.0
 fromWheel2 :: Word -> Word
 fromWheel2 i = i `shiftL` 1 + 1
 {-# INLINE fromWheel2 #-}
@@ -109,6 +113,8 @@ fromWheel2 i = i `shiftL` 1 + 1
 -- | Left inverse for 'fromWheel6'. Monotonically non-decreasing function.
 --
 -- prop> toWheel6 . fromWheel6 == id
+--
+-- @since 0.2.0.0
 toWheel6 :: Word -> Word
 toWheel6 i@(W# i#) = case bits of
   64 -> W# z1# `shiftR` 1
@@ -126,6 +132,8 @@ toWheel6 i@(W# i#) = case bits of
 --
 -- >>> map fromWheel6 [0..9]
 -- [1,5,7,11,13,17,19,23,25,29]
+--
+-- @since 0.2.0.0
 fromWheel6 :: Word -> Word
 fromWheel6 i = i `shiftL` 1 + i + (i .&. 1) + 1
 {-# INLINE fromWheel6 #-}
@@ -133,6 +141,8 @@ fromWheel6 i = i `shiftL` 1 + i + (i .&. 1) + 1
 -- | Left inverse for 'fromWheel30'. Monotonically non-decreasing function.
 --
 -- prop> toWheel30 . fromWheel30 == id
+--
+-- @since 0.2.0.0
 toWheel30 :: Word -> Word
 toWheel30 i@(W# i#) = q `shiftL` 3 + (r + r `shiftR` 4) `shiftR` 2
   where
@@ -154,6 +164,8 @@ toWheel30 i@(W# i#) = q `shiftL` 3 + (r + r `shiftR` 4) `shiftR` 2
 --
 -- >>> map fromWheel30 [0..9]
 -- [1,7,11,13,17,19,23,29,31,37]
+--
+-- @since 0.2.0.0
 fromWheel30 :: Word -> Word
 fromWheel30 i = ((i `shiftL` 2 - i `shiftR` 2) .|. 1)
               + ((i `shiftL` 1 - i `shiftR` 1) .&. 2)
@@ -162,6 +174,8 @@ fromWheel30 i = ((i `shiftL` 2 - i `shiftR` 2) .|. 1)
 -- | Left inverse for 'fromWheel210'. Monotonically non-decreasing function.
 --
 -- prop> toWheel210 . fromWheel210 == id
+--
+-- @since 0.2.0.0
 toWheel210 :: Word -> Word
 toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + W# tableEl#
   where
@@ -193,6 +207,8 @@ toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + W# tableEl#
 --
 -- >>> map fromWheel210 [0..9]
 -- [1,11,13,17,19,23,29,31,37,41]
+--
+-- @since 0.2.0.0
 fromWheel210 :: Word -> Word
 fromWheel210 i@(W# i#) = q * 210 + W# tableEl#
   where

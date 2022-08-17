@@ -106,6 +106,8 @@ int2word = unsafeCoerce
 --
 -- >>> map intToWord [-5..5]
 -- [9,7,5,3,1,0,2,4,6,8,10]
+--
+-- @since 0.2.0.0
 intToWord :: Int -> Word
 intToWord i
   | i >= 0    = int2word        i `shiftL` 1
@@ -115,6 +117,8 @@ intToWord i
 --
 -- >>> map wordToInt [0..10]
 -- [0,-1,1,-2,2,-3,3,-4,4,-5,5]
+--
+-- @since 0.2.0.0
 wordToInt :: Word -> Int
 wordToInt w
   | even w    =         word2int (w `shiftR` 1)
@@ -127,6 +131,8 @@ wordToInt w
 --
 -- >>> [ toZCurve x y | x <- [0..3], y <- [0..3] ]
 -- [0,2,8,10,1,3,9,11,4,6,12,14,5,7,13,15]
+--
+-- @since 0.2.0.0
 toZCurve :: Word -> Word -> Word
 toZCurve x y = part1by1 y `shiftL` 1 .|. part1by1 x
 
@@ -135,6 +141,8 @@ toZCurve x y = part1by1 y `shiftL` 1 .|. part1by1 x
 --
 -- >>> map fromZCurve [0..15]
 -- [(0,0),(1,0),(0,1),(1,1),(2,0),(3,0),(2,1),(3,1),(0,2),(1,2),(0,3),(1,3),(2,2),(3,2),(2,3),(3,3)]
+--
+-- @since 0.2.0.0
 fromZCurve :: Word -> (Word, Word)
 fromZCurve z = (compact1by1 z, compact1by1 (z `shiftR` 1))
 
@@ -146,6 +154,8 @@ fromZCurve z = (compact1by1 z, compact1by1 (z `shiftR` 1))
 -- >>> [ toZCurve3 x y z | x <- [0..3], y <- [0..3], z <- [0..3] ]
 -- [0,4,32,36,2,6,34,38,16,20,48,52,18,22,50,54,1,5,33,37,3,7,35,39,17,21,49,53,19,23,51,55,
 -- 8,12,40,44,10,14,42,46,24,28,56,60,26,30,58,62,9,13,41,45,11,15,43,47,25,29,57,61,27,31,59,63]
+--
+-- @since 0.2.0.0
 toZCurve3 :: Word -> Word -> Word -> Word
 toZCurve3 x y z = part1by2 z `shiftL` 2 .|. part1by2 y `shiftL` 1 .|. part1by2 x
 
@@ -157,6 +167,8 @@ toZCurve3 x y z = part1by2 z `shiftL` 2 .|. part1by2 y `shiftL` 1 .|. part1by2 x
 --  (0,2,0),(1,2,0),(0,3,0),(1,3,0),(0,2,1),(1,2,1),(0,3,1),(1,3,1),(2,2,0),(3,2,0),(2,3,0),(3,3,0),(2,2,1),(3,2,1),(2,3,1),(3,3,1),
 --  (0,0,2),(1,0,2),(0,1,2),(1,1,2),(0,0,3),(1,0,3),(0,1,3),(1,1,3),(2,0,2),(3,0,2),(2,1,2),(3,1,2),(2,0,3),(3,0,3),(2,1,3),(3,1,3),
 --  (0,2,2),(1,2,2),(0,3,2),(1,3,2),(0,2,3),(1,2,3),(0,3,3),(1,3,3),(2,2,2),(3,2,2),(2,3,2),(3,3,2),(2,2,3),(3,2,3),(2,3,3),(3,3,3)]
+--
+-- @since 0.2.0.0
 fromZCurve3 :: Word -> (Word, Word, Word)
 fromZCurve3 z = (compact1by2 z, compact1by2 (z `shiftR` 1), compact1by2 (z `shiftR` 2))
 
