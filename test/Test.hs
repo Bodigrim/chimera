@@ -102,6 +102,11 @@ chimeraTests = testGroup "Chimera"
       let jx = ix `mod` 65536 in
         iterate f seed !! fromIntegral jx === Ch.index (Ch.iterate f seed :: UChimera Word) jx
 
+  , QC.testProperty "interleave" $
+    \(Fun _ (f :: Word -> Bool)) (Fun _ (g :: Word -> Bool)) ix ->
+      let jx = ix `mod` 65536 in
+        (if even jx then f else g) (jx `quot` 2) === Ch.index (Ch.interleave (Ch.tabulate f) (Ch.tabulate g) :: UChimera Bool) jx
+
   , QC.testProperty "pure" $
     \x ix ->
       let jx = ix `mod` 65536 in

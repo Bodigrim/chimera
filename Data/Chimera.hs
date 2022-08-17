@@ -37,6 +37,9 @@ module Data.Chimera
   , fromListWithDef
   , fromVectorWithDef
 
+  -- * Manipulation
+  , interleave
+
   -- * Elimination
   , index
   , toList
@@ -349,6 +352,23 @@ iterateM f seed = do
       G.iterateNM (G.length vec `shiftL` 1) f nextSeed
 
 {-# SPECIALIZE iterateM :: G.Vector v a => (a -> Identity a) -> a -> Identity (Chimera v a) #-}
+
+interleaveVec :: G.Vector v a => v a -> v a -> v a
+interleaveVec as bs = G.generate (G.length as `shiftL` 1)
+  (\n -> (if even n then as else bs) G.! (n `shiftR` 1))
+
+-- | Intertleave two streams, sourcing even elements from the first one
+-- and odd elements from the second one.
+--
+-- >>> ch = interleave (tabulate id) (tabulate (+ 100)) :: UChimera Word
+-- >>> take 10 (toList ch)
+-- [0,100,1,101,2,102,3,103,4,104]
+--
+interleave :: G.Vector v a => Chimera v a -> Chimera v a -> Chimera v a
+interleave (Chimera as) (Chimera bs) = Chimera $ A.arrayFromListN (bits + 1) vecs
+  where
+    vecs = A.indexArray as 0 : A.indexArray bs 0 :
+      map (\i -> interleaveVec (A.indexArray as i) (A.indexArray bs i)) [1 .. bits - 1]
 
 -- | Index a stream in a constant time.
 --
