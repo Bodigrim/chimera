@@ -142,7 +142,7 @@ chimeraTests = testGroup "Chimera"
   , QC.testProperty "zipWithKey" $
     \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Word) -> Word)) ix ->
       let jx = ix `mod` 65536 in
-        g (Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipSubvectors (G.zipWith (curry g)) bs1 bs2 :: UChimera Word) jx
+        g (Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipWithSubvectors (G.zipWith (curry g)) bs1 bs2 :: UChimera Word) jx
 
   , QC.testProperty "sliceSubvectors" $
     \x xs ix ->

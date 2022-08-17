@@ -55,6 +55,8 @@ module Data.Chimera
   , mapSubvectors
   , traverseSubvectors
   , zipSubvectors
+  , zipWithSubvectors
+  , zipWithMSubvectors
   , sliceSubvectors
   ) where
 
@@ -125,7 +127,7 @@ import Data.Chimera.FromIntegral
 -- > import Data.Bits
 -- > ch1 = tabulate (Bit . f1)
 -- > ch2 = tabulate (Bit . f2)
--- > ch3 = zipSubvectors (zipBits (.&.)) ch1 ch2
+-- > ch3 = zipWithSubvectors (zipBits (.&.)) ch1 ch2
 
 -- | Lazy infinite streams with elements from @a@,
 -- backed by a 'G.Vector' @v@ (boxed, unboxed, storable, etc.).
@@ -145,9 +147,9 @@ type UChimera = Chimera U.Vector
 instance Applicative (Chimera V.Vector) where
   pure a = Chimera $ A.arrayFromListN (bits + 1) $
     G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
-  (<*>)  = zipSubvectors (<*>)
+  (<*>)  = zipWithSubvectors (<*>)
 #if __GLASGOW_HASKELL__ > 801
-  liftA2 f = zipSubvectors (liftA2 f)
+  liftA2 f = zipWithSubvectors (liftA2 f)
 #endif
 
 instance Monad (Chimera V.Vector) where
@@ -157,8 +159,8 @@ instance MonadFix (Chimera V.Vector) where
   mfix = tabulate . mfix . fmap index
 
 instance MonadZip (Chimera V.Vector) where
-  mzip = zipSubvectors mzip
-  mzipWith = zipSubvectors . mzipWith
+  mzip = zipWithSubvectors mzip
+  mzipWith = zipWithSubvectors . mzipWith
 
 #ifdef MIN_VERSION_mtl
 instance MonadReader Word (Chimera V.Vector) where
@@ -539,19 +541,34 @@ traverseSubvectors f (Chimera bs) = Chimera <$> traverse safeF bs
     safeF x = (\fx -> if G.length x == G.length fx then fx else
         error "traverseSubvectors: the function is not length-preserving") <$> f x
 
+zipSubvectors :: (G.Vector u a, G.Vector v b, G.Vector w c) => (u a -> v b -> w c) -> Chimera u a -> Chimera v b -> Chimera w c
+zipSubvectors = zipWithSubvectors
+{-# DEPRECATED zipSubvectors "Use zipWithSubvectors instead" #-}
+
 -- | Zip subvectors from two streams, using a given length-preserving function.
-zipSubvectors
+zipWithSubvectors
   :: (G.Vector u a, G.Vector v b, G.Vector w c)
   => (u a -> v b -> w c)
   -> Chimera u a
   -> Chimera v b
   -> Chimera w c
-zipSubvectors f (Chimera bs1) (Chimera bs2) = Chimera (mzipWith safeF bs1 bs2)
+zipWithSubvectors f = (runIdentity .) . zipWithMSubvectors ((pure .) . f)
+
+-- | Zip subvectors from two streams, using a given monadic length-preserving function.
+-- Caveats for 'tabulateM' and 'traverseSubvectors' apply.
+zipWithMSubvectors
+  :: (G.Vector u a, G.Vector v b, G.Vector w c, Applicative m)
+  => (u a -> v b -> m (w c))
+  -> Chimera u a
+  -> Chimera v b
+  -> m (Chimera w c)
+zipWithMSubvectors f (Chimera bs1) (Chimera bs2) = Chimera <$> sequenceA (mzipWith safeF bs1 bs2)
   where
     -- Computing vector length is cheap, so let's check that @f@ preserves length.
-    safeF x y = let fxy = f x y in
-      if G.length x == G.length fxy then fxy else
-        error "zipSubvectors: the function is not length-preserving"
+    safeF x y = (\fx -> if G.length x == G.length fx then fx else
+        error "traverseSubvectors: the function is not length-preserving") <$> f x y
+
+{-# SPECIALIZE zipWithMSubvectors :: (G.Vector u a, G.Vector v b, G.Vector w c) => (u a -> v b -> Identity (w c)) -> Chimera u a -> Chimera v b -> Identity (Chimera w c) #-}
 
 -- | Take a slice of 'Chimera', represented as a list on consecutive subvectors.
 sliceSubvectors
