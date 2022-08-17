@@ -223,13 +223,11 @@ generateArrayM n f = A.arrayFromListN n <$> traverse f [0..n - 1]
 --
 -- @since 0.2.0.0
 tabulateM
-  :: forall m v a.
-     (Monad m, G.Vector v a)
+  :: (Monad m, G.Vector v a)
   => (Word -> m a)
   -> m (Chimera v a)
 tabulateM f = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
   where
-    tabulateSubVector :: Int -> m (v a)
     tabulateSubVector 0 = G.singleton <$> f 0
     tabulateSubVector i = G.generateM ii (\j -> f (int2word (ii + j)))
       where
@@ -297,8 +295,7 @@ tabulateFix' uf = runIdentity $ tabulateFixM' ((pure .) . uf . (runIdentity .))
 --
 -- @since 0.2.0.0
 tabulateFixM
-  :: forall m v a.
-     (Monad m, G.Vector v a)
+  :: (Monad m, G.Vector v a)
   => ((Word -> m a) -> Word -> m a)
   -> m (Chimera v a)
 tabulateFixM = tabulateFixM_ Downwards
@@ -375,14 +372,13 @@ iterateListNM n f = if n <= 0 then const (pure []) else go (n - 1)
 -- | Monadic version of 'iterate'.
 --
 -- @since 0.3.0.0
-iterateM :: forall m v a. (Monad m, G.Vector v a) => (a -> m a) -> a -> m (Chimera v a)
+iterateM :: (Monad m, G.Vector v a) => (a -> m a) -> a -> m (Chimera v a)
 iterateM f seed = do
   nextSeed <- f seed
   let z = G.singleton seed
   zs <- iterateListNM bits go (G.singleton nextSeed)
   pure $ Chimera $ A.fromListN (bits + 1) (z : zs)
   where
-    go :: v a -> m (v a)
     go vec = do
       nextSeed <- f (G.unsafeLast vec)
       G.iterateNM (G.length vec `shiftL` 1) f nextSeed
