@@ -285,6 +285,8 @@ tabulateFixM'
   -> m (Chimera v a)
 tabulateFixM' = tabulateFixM_ Full
 
+{-# SPECIALIZE tabulateFixM' :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
+
 -- | Memoization strategy, only used by 'tabulateFixM_'.
 data Strategy = Full | Downwards
 
@@ -540,6 +542,8 @@ traverseSubvectors f (Chimera bs) = Chimera <$> traverse safeF bs
     -- Computing vector length is cheap, so let's check that @f@ preserves length.
     safeF x = (\fx -> if G.length x == G.length fx then fx else
         error "traverseSubvectors: the function is not length-preserving") <$> f x
+
+{-# SPECIALIZE traverseSubvectors :: (G.Vector u a, G.Vector v b) => (u a -> Identity (v b)) -> Chimera u a -> Identity (Chimera v b)  #-}
 
 zipSubvectors :: (G.Vector u a, G.Vector v b, G.Vector w c) => (u a -> v b -> w c) -> Chimera u a -> Chimera v b -> Chimera w c
 zipSubvectors = zipWithSubvectors
