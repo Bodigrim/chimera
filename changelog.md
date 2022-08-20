@@ -1,6 +1,7 @@
 # 0.3.3.0
 
 * Add `fromListWithDef`, `fromVectorWithDef`, `interleave`.
+* Add `unfoldr` and `unfoldrM`.
 * Add `sliceSubvectors`, `traverseSubvectors`, `zipWithSubvectors` and `zipWithMSubvectors`.
 * Deprecate `zipSubvectors` in favor of `zipWithSubvectors`.
 

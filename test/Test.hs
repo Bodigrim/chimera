@@ -12,6 +12,7 @@ import Test.Tasty.QuickCheck as QC
 import Data.Bits
 import Data.Foldable
 import Data.Function (fix)
+import qualified Data.List as L
 import qualified Data.Vector.Generic as G
 
 import Data.Chimera.ContinuousMapping
@@ -101,6 +102,11 @@ chimeraTests = testGroup "Chimera"
     \(Fun _ (f :: Word -> Word)) seed ix ->
       let jx = ix `mod` 65536 in
         iterate f seed !! fromIntegral jx === Ch.index (Ch.iterate f seed :: UChimera Word) jx
+
+  , QC.testProperty "unfoldr" $
+    \(Fun _ (f :: Word -> (Int, Word))) seed ix ->
+      let jx = ix `mod` 65536 in
+        L.unfoldr (Just . f) seed !! fromIntegral jx === Ch.index (Ch.unfoldr f seed :: UChimera Int) jx
 
   , QC.testProperty "interleave" $
     \(Fun _ (f :: Word -> Bool)) (Fun _ (g :: Word -> Bool)) ix ->

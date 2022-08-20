@@ -49,7 +49,7 @@ flag representable
   default: True
 
 library
-  build-depends: base >=4.9 && <5, primitive, vector
+  build-depends: base >=4.9 && <5, primitive, transformers, vector
   if flag(representable)
     build-depends: adjunctions, distributive, mtl
   exposed-modules:
