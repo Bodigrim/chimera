@@ -64,12 +64,12 @@
 --
 -- > cast :: (Int -> Int -> Bool) -> (Word -> Bool)
 -- > cast f = \n -> let (x, y) = fromZCurve n in
--- >  f (word2int x) (word2int y)
+-- >  f (wordToInt x) (wordToInt y)
 --
 -- and then back:
 --
 -- > uncast :: (Word -> Bool) -> (Int -> Int -> Bool)
--- > uncast g = \x y -> g (toZCurve (int2word x) (int2word y))
+-- > uncast g = \x y -> g (toZCurve (intToWord x) (intToWord y))
 --
 
 {-# LANGUAGE CPP #-}
