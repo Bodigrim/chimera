@@ -108,9 +108,10 @@ int2word = fromIntegral
 --
 -- @since 0.2.0.0
 intToWord :: Int -> Word
-intToWord i
-  | i >= 0    = int2word        i `shiftL` 1
-  | otherwise = int2word (-1 - i) `shiftL` 1 + 1
+intToWord i = (if sign == 0 then id else complement) (int2word i) `shiftL` 1 + sign
+  where
+    sign = int2word i `shiftR` (finiteBitSize i - 1)
+{-# INLINE intToWord #-}
 
 -- | Inverse for 'intToWord'.
 --
@@ -119,9 +120,8 @@ intToWord i
 --
 -- @since 0.2.0.0
 wordToInt :: Word -> Int
-wordToInt w
-  | even w    =         word2int (w `shiftR` 1)
-  | otherwise = negate (word2int (w `shiftR` 1)) - 1
+wordToInt w = word2int $ (if w .&. 1 == 0 then id else complement) (w `shiftR` 1)
+{-# INLINE wordToInt #-}
 
 -- | Total map from plain to line, continuous almost everywhere.
 -- See <https://en.wikipedia.org/wiki/Z-order_curve Z-order curve>.
