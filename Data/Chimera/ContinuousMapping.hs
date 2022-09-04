@@ -88,13 +88,12 @@ module Data.Chimera.ContinuousMapping
   ) where
 
 import Data.Bits
-import Unsafe.Coerce
 
 word2int :: Word -> Int
-word2int = unsafeCoerce
+word2int = fromIntegral
 
 int2word :: Int -> Word
-int2word = unsafeCoerce
+int2word = fromIntegral
 
 -- | Total map, which satisfies
 --
