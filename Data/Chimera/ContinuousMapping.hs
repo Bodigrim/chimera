@@ -82,13 +82,8 @@ module Data.Chimera.ContinuousMapping
   ) where
 
 import Data.Bits
+import Data.Chimera.FromIntegral
 import Data.Word
-
-word2int :: Word -> Int
-word2int = fromIntegral
-
-int2word :: Int -> Word
-int2word = fromIntegral
 
 -- | Total map, which satisfies
 --
