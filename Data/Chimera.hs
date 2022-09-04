@@ -86,7 +86,6 @@ import qualified Data.Functor.Rep as Rep
 #endif
 #endif
 
-import Data.Chimera.Compat
 import Data.Chimera.FromIntegral
 
 -- $monadic
@@ -204,7 +203,7 @@ instance Rep.Representable (Chimera V.Vector) where
 #endif
 
 bits :: Int
-bits = fbs (0 :: Word)
+bits = finiteBitSize (0 :: Word)
 
 -- | Create a stream of values of a given function.
 -- Once created it can be accessed via 'index' or 'toList'.
@@ -459,7 +458,7 @@ index (Chimera vs) i =
   word2int (i .&. complement ((1 `shiftL` (bits - 1)) `unsafeShiftR` lz))
   where
     lz :: Int
-    !lz = word2int (clz i)
+    !lz = countLeadingZeros i
 {-# INLINE index #-}
 
 -- | Convert a stream to an infinite list.

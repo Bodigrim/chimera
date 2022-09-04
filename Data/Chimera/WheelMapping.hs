@@ -82,11 +82,10 @@ module Data.Chimera.WheelMapping
   ) where
 
 import Data.Bits
-import Data.Chimera.Compat
 import GHC.Exts
 
 bits :: Int
-bits = fbs (0 :: Word)
+bits = finiteBitSize (0 :: Word)
 
 -- | Left inverse for 'fromWheel2'. Monotonically non-decreasing function.
 --
