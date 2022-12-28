@@ -49,6 +49,7 @@ module Data.Chimera
   -- $monadic
   , tabulateM
   , tabulateFixM
+  , tabulateFixM'
   , iterateM
   , unfoldrM
 
@@ -306,6 +307,8 @@ tabulateFixM = tabulateFixM_ Downwards
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
 -- | Monadic version of 'tabulateFix''.
+--
+-- @since 0.3.3.0
 tabulateFixM'
   :: forall m v a.
      (Monad m, G.Vector v a)
@@ -315,7 +318,7 @@ tabulateFixM' = tabulateFixM_ Full
 
 {-# SPECIALIZE tabulateFixM' :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
--- | Memoization strategy, only used by 'tabulateFixM_'.
+-- | Memoization strategy, only used by @tabulateFixM_@.
 data Strategy = Full | Downwards
 
 -- | Internal implementation for 'tabulateFixM' and 'tabulateFixM''.
