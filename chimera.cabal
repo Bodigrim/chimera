@@ -83,7 +83,8 @@ benchmark chimera-bench
     chimera,
     mtl,
     random,
-    tasty-bench >= 0.2.4
+    tasty >= 1.4.2,
+    tasty-bench >= 0.3.2
   type: exitcode-stdio-1.0
   main-is: Bench.hs
   default-language: Haskell2010

@@ -6,6 +6,7 @@ import Control.Monad.State (evalState, put, get)
 import Data.Bits
 import Data.Chimera
 import Test.Tasty.Bench
+import Test.Tasty.Patterns.Printer
 import System.Random
 
 #ifdef MIN_VERSION_ral
@@ -16,13 +17,21 @@ sizes :: Num a => [a]
 sizes = [7, 8, 9, 10]
 
 main :: IO ()
-main = defaultMain $ (: []) $ bgroup "read"
-  [ bgroup "Chimera" (map benchReadChimera sizes)
-  , bgroup "List"    (map benchReadList    sizes)
+main = defaultMain $ (: []) $ mapLeafBenchmarks addCompare $ bgroup "read"
+  [ bgroup chimeraBenchName (map benchReadChimera sizes)
+  , bgroup "List"           (map benchReadList    sizes)
 #ifdef MIN_VERSION_ral
-  , bgroup "RAL"     (map benchReadRAL     sizes)
+  , bgroup "RAL"            (map benchReadRAL     sizes)
 #endif
   ]
+
+chimeraBenchName :: String
+chimeraBenchName = "Chimera"
+
+addCompare :: ([String] -> Benchmark -> Benchmark)
+addCompare (size : name : path)
+  | name /= "Chimera" = bcompare (printAwkExpr (locateBenchmark (size : chimeraBenchName : path)))
+addCompare _ = id
 
 randomChimera :: UChimera Int
 randomChimera = flip evalState (mkStdGen 42) $ tabulateM $ const $ do
@@ -56,8 +65,7 @@ benchReadChimera k
 
 benchReadList :: Int -> Benchmark
 benchReadList k
-  = bcompare ("$NF == \"" ++ show n ++ "\" && $(NF-1) == \"Chimera\"")
-  $ bench (show n)
+  = bench (show n)
   $ nf (sum . map (randomList !!))
   $ map (.&. (n - 1))
   $ take n randomIndicesInt
@@ -67,8 +75,7 @@ benchReadList k
 #ifdef MIN_VERSION_ral
 benchReadRAL :: Int -> Benchmark
 benchReadRAL k
-  = bcompare ("$NF == \"" ++ show n ++ "\" && $(NF-1) == \"Chimera\"")
-  $ bench (show n)
+  = bench (show n)
   $ nf (sum . map (randomRAL RAL.!))
   $ map (.&. (n - 1))
   $ take n randomIndicesInt
