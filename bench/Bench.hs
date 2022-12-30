@@ -30,7 +30,8 @@ chimeraBenchName = "Chimera"
 
 addCompare :: ([String] -> Benchmark -> Benchmark)
 addCompare (size : name : path)
-  | name /= "Chimera" = bcompare (printAwkExpr (locateBenchmark (size : chimeraBenchName : path)))
+  | name /= chimeraBenchName
+  = bcompare (printAwkExpr (locateBenchmark (size : chimeraBenchName : path)))
 addCompare _ = id
 
 randomChimera :: UChimera Int
