@@ -63,7 +63,7 @@ module Data.Chimera
   , sliceSubvectors
   ) where
 
-import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop)
+import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop, Applicative(..))
 import Control.Applicative
 import Control.Monad.Fix
 import Control.Monad.Trans.Class
