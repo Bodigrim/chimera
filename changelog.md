@@ -1,3 +1,7 @@
+# 0.4.0.0
+
+* Add `foldr`.
+
 # 0.3.3.0
 
 * Add `fromListWithDef`, `fromVectorWithDef`, `interleave`.

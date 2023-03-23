@@ -43,6 +43,7 @@ module Data.Chimera
 
   -- * Elimination
   , index
+  , foldr
   , toList
 
   -- * Monadic construction
@@ -63,7 +64,7 @@ module Data.Chimera
   , sliceSubvectors
   ) where
 
-import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop, Applicative(..))
+import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop, Applicative(..), foldr)
 import Control.Applicative
 import Control.Monad.Fix
 import Control.Monad.Trans.Class
@@ -473,6 +474,20 @@ index (Chimera vs) i =
 -- @since 0.3.0.0
 toList :: G.Vector v a => Chimera v a -> [a]
 toList (Chimera vs) = foldMap G.toList vs
+
+-- | Right-associative fold, necessarily lazy in the accumulator.
+-- Any unconditional attempt to force the accumulator even to WHNF
+-- will hang the computation. E. g., the following definition isn't productive:
+--
+-- > import Data.List.NonEmpty (NonEmpty(..))
+-- > toNonEmpty = foldr (\a (x :| xs) -> a :| x : xs) :: VChimera a -> NonEmpty a
+--
+-- One should use lazy patterns, e. g.,
+--
+-- > toNonEmpty = foldr (\a ~(x :| xs) -> a :| x : xs)
+--
+foldr :: G.Vector v a => (a -> b -> b) -> Chimera v a -> b
+foldr f (Chimera vs) = F.foldr (flip $ G.foldr f) undefined vs
 
 measureOff :: Int -> [a] -> Either Int ([a], [a])
 measureOff n
