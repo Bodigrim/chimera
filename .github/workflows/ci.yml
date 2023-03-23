@@ -54,5 +54,5 @@ jobs:
     - name: Bench
       run: cabal bench --benchmark-options=-l
     - name: Haddock
-      if: ${{ matrix.ghc >= '8.2' }}
+      if: ${{ matrix.ghc != '8.0' && matrix.ghc != '8.2' && matrix.ghc != '8.4' }}
       run: cabal haddock
