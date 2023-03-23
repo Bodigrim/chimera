@@ -1,6 +1,7 @@
 # 0.4.0.0
 
 * Add `foldr`.
+* Remove instances `Foldable` and `Traversable`, they are too dangerous to diverge.
 
 # 0.3.3.0
 

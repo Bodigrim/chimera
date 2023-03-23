@@ -144,8 +144,6 @@ import Data.Chimera.FromIntegral
 newtype Chimera v a = Chimera { unChimera :: A.Array (v a) }
   deriving
   ( Functor     -- ^ @since 0.2.0.0
-  , Foldable    -- ^ @since 0.2.0.0
-  , Traversable -- ^ @since 0.2.0.0
   )
 
 -- | Streams backed by boxed vectors.
