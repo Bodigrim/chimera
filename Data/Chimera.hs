@@ -58,7 +58,6 @@ module Data.Chimera
   -- $subvectors
   , mapSubvectors
   , traverseSubvectors
-  , zipSubvectors
   , zipWithSubvectors
   , zipWithMSubvectors
   , sliceSubvectors
@@ -647,11 +646,6 @@ traverseSubvectors f (Chimera bs) = Chimera <$> traverse safeF bs
         error "traverseSubvectors: the function is not length-preserving") <$> f x
 
 {-# SPECIALIZE traverseSubvectors :: (G.Vector u a, G.Vector v b) => (u a -> Identity (v b)) -> Chimera u a -> Identity (Chimera v b)  #-}
-
--- | @since 0.3.0.0
-zipSubvectors :: (G.Vector u a, G.Vector v b, G.Vector w c) => (u a -> v b -> w c) -> Chimera u a -> Chimera v b -> Chimera w c
-zipSubvectors = zipWithSubvectors
-{-# DEPRECATED zipSubvectors "Use zipWithSubvectors instead" #-}
 
 -- | Zip subvectors from two streams, using a given length-preserving function.
 --
