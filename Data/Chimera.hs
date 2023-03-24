@@ -37,6 +37,7 @@ module Data.Chimera
   , cycle
   , fromListWithDef
   , fromVectorWithDef
+  , fromInfinite
 
   -- * Manipulation
   , interleave
@@ -45,6 +46,7 @@ module Data.Chimera
   , index
   , foldr
   , toList
+  , toInfinite
 
   -- * Monadic construction
   -- $monadic
@@ -72,6 +74,8 @@ import Control.Monad.Zip
 import Data.Bits
 import qualified Data.Foldable as F
 import Data.Functor.Identity
+import Data.List.Infinite (Infinite(..))
+import qualified Data.List.Infinite as Inf
 import qualified Data.Primitive.Array as A
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
@@ -472,6 +476,12 @@ index (Chimera vs) i =
 toList :: G.Vector v a => Chimera v a -> [a]
 toList (Chimera vs) = foldMap G.toList vs
 
+-- | Convert a stream to a proper infinite list.
+--
+-- @since 0.4.0.0
+toInfinite :: G.Vector v a => Chimera v a -> Infinite a
+toInfinite = foldr (:<)
+
 -- | Right-associative fold, necessarily lazy in the accumulator.
 -- Any unconditional attempt to force the accumulator even to WHNF
 -- will hang the computation. E. g., the following definition isn't productive:
@@ -525,6 +535,22 @@ fromListWithDef a = Chimera . A.fromListN (bits + 1) . go0
       Right (ys, zs) -> G.fromListN kk ys : go (k + 1) zs
       where
         kk = 1 `shiftL` k
+
+-- | Create a stream of values from a given infinite list.
+--
+-- @since 0.4.0.0
+fromInfinite
+  :: G.Vector v a
+  => Infinite a
+  -> Chimera v a
+fromInfinite = Chimera . A.fromListN (bits + 1) . go0
+  where
+    go0 (x :< xs) = G.singleton x : go 0 xs
+
+    go k xs = G.fromListN kk ys : go (k + 1) zs
+      where
+        kk = 1 `shiftL` k
+        (ys, zs) = Inf.splitAt kk xs
 
 -- | Create a stream of values from a given prefix, followed by default value
 -- afterwards.
