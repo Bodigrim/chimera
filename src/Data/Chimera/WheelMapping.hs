@@ -1,3 +1,9 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE UnboxedTuples #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
+
 -- |
 -- Module:      Data.Chimera.WheelMapping
 -- Copyright:   (c) 2017 Andrew Lelechenko
@@ -63,23 +69,16 @@
 -- consider using 'Data.Bit.Bit' wrapper,
 -- which provides an instance of unboxed vector,
 -- packing one boolean per bit instead of one boolean per byte for 'Bool')
---
-
-{-# LANGUAGE BangPatterns  #-}
-{-# LANGUAGE CPP           #-}
-{-# LANGUAGE MagicHash     #-}
-{-# LANGUAGE UnboxedTuples #-}
-
-module Data.Chimera.WheelMapping
-  ( fromWheel2
-  , toWheel2
-  , fromWheel6
-  , toWheel6
-  , fromWheel30
-  , toWheel30
-  , fromWheel210
-  , toWheel210
-  ) where
+module Data.Chimera.WheelMapping (
+  fromWheel2,
+  toWheel2,
+  fromWheel6,
+  toWheel6,
+  fromWheel30,
+  toWheel30,
+  fromWheel210,
+  toWheel210,
+) where
 
 import Data.Bits
 import GHC.Exts
@@ -117,11 +116,10 @@ fromWheel2 i = i `shiftL` 1 + 1
 toWheel6 :: Word -> Word
 toWheel6 i@(W# i#) = case bits of
   64 -> W# z1# `shiftR` 1
-  _  -> i `quot` 3
+  _ -> i `quot` 3
   where
     m# = 12297829382473034411## -- (2^65+1) / 3
     !(# z1#, _ #) = timesWord2# m# i#
-
 {-# INLINE toWheel6 #-}
 
 -- | 'fromWheel6' n is the (n+1)-th positive number, not divisible by 2 or 3.
@@ -147,13 +145,12 @@ toWheel30 i@(W# i#) = q `shiftL` 3 + (r + r `shiftR` 4) `shiftR` 2
   where
     (q, r) = case bits of
       64 -> (q64, r64)
-      _  -> i `quotRem` 30
+      _ -> i `quotRem` 30
 
     m# = 9838263505978427529## -- (2^67+7) / 15
     !(# z1#, _ #) = timesWord2# m# i#
     q64 = W# z1# `shiftR` 4
     r64 = i - q64 `shiftL` 5 + q64 `shiftL` 1
-
 {-# INLINE toWheel30 #-}
 
 -- | 'fromWheel30' n is the (n+1)-th positive number, not divisible by 2, 3 or 5.
@@ -166,8 +163,9 @@ toWheel30 i@(W# i#) = q `shiftL` 3 + (r + r `shiftR` 4) `shiftR` 2
 --
 -- @since 0.2.0.0
 fromWheel30 :: Word -> Word
-fromWheel30 i = ((i `shiftL` 2 - i `shiftR` 2) .|. 1)
-              + ((i `shiftL` 1 - i `shiftR` 1) .&. 2)
+fromWheel30 i =
+  ((i `shiftL` 2 - i `shiftR` 2) .|. 1)
+    + ((i `shiftL` 1 - i `shiftR` 1) .&. 2)
 {-# INLINE fromWheel30 #-}
 
 -- | Left inverse for 'fromWheel210'. Monotonically non-decreasing function.
@@ -180,22 +178,18 @@ toWheel210 i@(W# i#) = q `shiftL` 5 + q `shiftL` 4 + W# tableEl#
   where
     !(q, W# r#) = case bits of
       64 -> (q64, r64)
-      _  -> i `quotRem` 210
+      _ -> i `quotRem` 210
 
     m# = 5621864860559101445## -- (2^69+13) / 105
     !(# z1#, _ #) = timesWord2# m# i#
     q64 = W# z1# `shiftR` 6
     r64 = i - q64 * 210
 
-    tableEl# =
-#if MIN_VERSION_base(4,16,0)
-      word8ToWord#
-#endif
-      (indexWord8OffAddr# table# (word2Int# r#))
+    tableEl# = word8ToWord# (indexWord8OffAddr# table# (word2Int# r#))
 
     table# :: Addr#
     table# = "\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\SOH\SOH\STX\STX\STX\STX\ETX\ETX\EOT\EOT\EOT\EOT\ENQ\ENQ\ENQ\ENQ\ENQ\ENQ\ACK\ACK\a\a\a\a\a\a\b\b\b\b\t\t\n\n\n\n\v\v\v\v\v\v\f\f\f\f\f\f\r\r\SO\SO\SO\SO\SO\SO\SI\SI\SI\SI\DLE\DLE\DC1\DC1\DC1\DC1\DC1\DC1\DC2\DC2\DC2\DC2\DC3\DC3\DC3\DC3\DC3\DC3\DC4\DC4\DC4\DC4\DC4\DC4\DC4\DC4\NAK\NAK\NAK\NAK\SYN\SYN\ETB\ETB\ETB\ETB\CAN\CAN\EM\EM\EM\EM\SUB\SUB\SUB\SUB\SUB\SUB\SUB\SUB\ESC\ESC\ESC\ESC\ESC\ESC\FS\FS\FS\FS\GS\GS\GS\GS\GS\GS\RS\RS\US\US\US\US      !!\"\"\"\"\"\"######$$$$%%&&&&''''''(())))))****++,,,,--........../"#
-    -- map Data.Char.chr [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 13, 13, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 22, 22, 23, 23, 23, 23, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 29, 29, 29, 29, 29, 29, 30, 30, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 33, 33, 34, 34, 34, 34, 34, 34, 35, 35, 35, 35, 35, 35, 36, 36, 36, 36, 37, 37, 38, 38, 38, 38, 39, 39, 39, 39, 39, 39, 40, 40, 41, 41, 41, 41, 41, 41, 42, 42, 42, 42, 43, 43, 44, 44, 44, 44, 45, 45, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 47]
+-- map Data.Char.chr [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 13, 13, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 22, 22, 23, 23, 23, 23, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 29, 29, 29, 29, 29, 29, 30, 30, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 33, 33, 34, 34, 34, 34, 34, 34, 35, 35, 35, 35, 35, 35, 36, 36, 36, 36, 37, 37, 38, 38, 38, 38, 39, 39, 39, 39, 39, 39, 40, 40, 41, 41, 41, 41, 41, 41, 42, 42, 42, 42, 43, 43, 44, 44, 44, 44, 45, 45, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 47]
 
 {-# INLINE toWheel210 #-}
 
@@ -213,21 +207,22 @@ fromWheel210 i@(W# i#) = q * 210 + W# tableEl#
   where
     !(q, W# r#) = case bits of
       64 -> (q64, r64)
-      _  -> i `quotRem` 48
+      _ -> i `quotRem` 48
 
     m# = 12297829382473034411## -- (2^65+1) / 3
     !(# z1#, _ #) = timesWord2# m# i#
     q64 = W# z1# `shiftR` 5
     r64 = i - q64 `shiftL` 5 - q64 `shiftL` 4
 
-    tableEl# =
-#if MIN_VERSION_base(4,16,0)
-      word8ToWord#
-#endif
-      (indexWord8OffAddr# table# (word2Int# r#))
+    tableEl# = word8ToWord# (indexWord8OffAddr# table# (word2Int# r#))
 
     table# :: Addr#
     table# = "\SOH\v\r\DC1\DC3\ETB\GS\US%)+/5;=CGIOSYaegkmqy\DEL\131\137\139\143\149\151\157\163\167\169\173\179\181\187\191\193\197\199\209"#
-    -- map Data.Char.chr [1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 121, 127, 131, 137, 139, 143, 149, 151, 157, 163, 167, 169, 173, 179, 181, 187, 191, 193, 197, 199, 209]
+-- map Data.Char.chr [1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 121, 127, 131, 137, 139, 143, 149, 151, 157, 163, 167, 169, 173, 179, 181, 187, 191, 193, 197, 199, 209]
 
 {-# INLINE fromWheel210 #-}
+
+#if !MIN_VERSION_base(4,16,0)
+word8ToWord# :: Word# -> Word#
+word8ToWord# x = x
+#endif

@@ -70,16 +70,14 @@
 --
 -- > uncast :: (Word -> Bool) -> (Int -> Int -> Bool)
 -- > uncast g = \x y -> g (toZCurve (intToWord x) (intToWord y))
---
-
-module Data.Chimera.ContinuousMapping
-  ( intToWord
-  , wordToInt
-  , toZCurve
-  , fromZCurve
-  , toZCurve3
-  , fromZCurve3
-  ) where
+module Data.Chimera.ContinuousMapping (
+  intToWord,
+  wordToInt,
+  toZCurve,
+  fromZCurve,
+  toZCurve3,
+  fromZCurve3,
+) where
 
 import Data.Bits
 import Data.Chimera.FromIntegral
@@ -165,42 +163,42 @@ fromZCurve3 z = (compact1by2 z, compact1by2 (z `shiftR` 1), compact1by2 (z `shif
 part1by1 :: Word -> Word
 part1by1 x = fromIntegral (x5 :: Word64)
   where
-    x0 = fromIntegral x              .&. 0x00000000ffffffff
+    x0 = fromIntegral x .&. 0x00000000ffffffff
     x1 = (x0 `xor` (x0 `shiftL` 16)) .&. 0x0000ffff0000ffff
-    x2 = (x1 `xor` (x1 `shiftL`  8)) .&. 0x00ff00ff00ff00ff
-    x3 = (x2 `xor` (x2 `shiftL`  4)) .&. 0x0f0f0f0f0f0f0f0f
-    x4 = (x3 `xor` (x3 `shiftL`  2)) .&. 0x3333333333333333
-    x5 = (x4 `xor` (x4 `shiftL`  1)) .&. 0x5555555555555555
+    x2 = (x1 `xor` (x1 `shiftL` 8)) .&. 0x00ff00ff00ff00ff
+    x3 = (x2 `xor` (x2 `shiftL` 4)) .&. 0x0f0f0f0f0f0f0f0f
+    x4 = (x3 `xor` (x3 `shiftL` 2)) .&. 0x3333333333333333
+    x5 = (x4 `xor` (x4 `shiftL` 1)) .&. 0x5555555555555555
 
 -- Inspired by https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
 part1by2 :: Word -> Word
 part1by2 x = fromIntegral (x5 :: Word64)
   where
-    x0 = fromIntegral x              .&. 0x00000000ffffffff
+    x0 = fromIntegral x .&. 0x00000000ffffffff
     x1 = (x0 `xor` (x0 `shiftL` 32)) .&. 0xffff00000000ffff
     x2 = (x1 `xor` (x1 `shiftL` 16)) .&. 0x00ff0000ff0000ff
-    x3 = (x2 `xor` (x2 `shiftL`  8)) .&. 0xf00f00f00f00f00f
-    x4 = (x3 `xor` (x3 `shiftL`  4)) .&. 0x30c30c30c30c30c3
-    x5 = (x4 `xor` (x4 `shiftL`  2)) .&. 0x1249249249249249
+    x3 = (x2 `xor` (x2 `shiftL` 8)) .&. 0xf00f00f00f00f00f
+    x4 = (x3 `xor` (x3 `shiftL` 4)) .&. 0x30c30c30c30c30c3
+    x5 = (x4 `xor` (x4 `shiftL` 2)) .&. 0x1249249249249249
 
 -- Inspired by https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
 compact1by1 :: Word -> Word
 compact1by1 x = fromIntegral (x5 :: Word64)
   where
-    x0 = fromIntegral x              .&. 0x5555555555555555
-    x1 = (x0 `xor` (x0 `shiftR`  1)) .&. 0x3333333333333333
-    x2 = (x1 `xor` (x1 `shiftR`  2)) .&. 0x0f0f0f0f0f0f0f0f
-    x3 = (x2 `xor` (x2 `shiftR`  4)) .&. 0x00ff00ff00ff00ff
-    x4 = (x3 `xor` (x3 `shiftR`  8)) .&. 0x0000ffff0000ffff
+    x0 = fromIntegral x .&. 0x5555555555555555
+    x1 = (x0 `xor` (x0 `shiftR` 1)) .&. 0x3333333333333333
+    x2 = (x1 `xor` (x1 `shiftR` 2)) .&. 0x0f0f0f0f0f0f0f0f
+    x3 = (x2 `xor` (x2 `shiftR` 4)) .&. 0x00ff00ff00ff00ff
+    x4 = (x3 `xor` (x3 `shiftR` 8)) .&. 0x0000ffff0000ffff
     x5 = (x4 `xor` (x4 `shiftR` 16)) .&. 0x00000000ffffffff
 
 -- Inspired by https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
 compact1by2 :: Word -> Word
 compact1by2 x = fromIntegral (x5 :: Word64)
   where
-    x0 = fromIntegral x              .&. 0x1249249249249249
-    x1 = (x0 `xor` (x0 `shiftR`  2)) .&. 0x30c30c30c30c30c3
-    x2 = (x1 `xor` (x1 `shiftR`  4)) .&. 0xf00f00f00f00f00f
-    x3 = (x2 `xor` (x2 `shiftR`  8)) .&. 0x00ff0000ff0000ff
+    x0 = fromIntegral x .&. 0x1249249249249249
+    x1 = (x0 `xor` (x0 `shiftR` 2)) .&. 0x30c30c30c30c30c3
+    x2 = (x1 `xor` (x1 `shiftR` 4)) .&. 0xf00f00f00f00f00f
+    x3 = (x2 `xor` (x2 `shiftR` 8)) .&. 0x00ff0000ff0000ff
     x4 = (x3 `xor` (x3 `shiftR` 16)) .&. 0xffff00000000ffff
     x5 = (x4 `xor` (x4 `shiftR` 32)) .&. 0x00000000ffffffff

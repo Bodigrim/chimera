@@ -1,3 +1,15 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+
 -- |
 -- Module:      Data.Chimera
 -- Copyright:   (c) 2018-2019 Andrew Lelechenko
@@ -5,67 +17,53 @@
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
 -- Lazy infinite streams with O(1) indexing.
-
-{-# LANGUAGE BangPatterns          #-}
-{-# LANGUAGE CPP                   #-}
-{-# LANGUAGE DeriveTraversable     #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-
-module Data.Chimera
-  ( -- * Memoization
-    memoize
-  , memoizeFix
+module Data.Chimera (
+  -- * Memoization
+  memoize,
+  memoizeFix,
 
   -- * Chimera
-  , Chimera
-  , VChimera
-  , UChimera
+  Chimera,
+  VChimera,
+  UChimera,
 
   -- * Construction
-  , tabulate
-  , tabulateFix
-  , tabulateFix'
-  , iterate
-  , unfoldr
-  , cycle
-  , fromListWithDef
-  , fromVectorWithDef
-  , fromInfinite
+  tabulate,
+  tabulateFix,
+  tabulateFix',
+  iterate,
+  unfoldr,
+  cycle,
+  fromListWithDef,
+  fromVectorWithDef,
+  fromInfinite,
 
   -- * Manipulation
-  , interleave
+  interleave,
 
   -- * Elimination
-  , index
-  , foldr
-  , toList
-  , toInfinite
+  index,
+  foldr,
+  toList,
+  toInfinite,
 
   -- * Monadic construction
   -- $monadic
-  , tabulateM
-  , tabulateFixM
-  , tabulateFixM'
-  , iterateM
-  , unfoldrM
+  tabulateM,
+  tabulateFixM,
+  tabulateFixM',
+  iterateM,
+  unfoldrM,
 
   -- * Subvectors
   -- $subvectors
-  , mapSubvectors
-  , traverseSubvectors
-  , zipWithSubvectors
-  , zipWithMSubvectors
-  , sliceSubvectors
-  ) where
+  mapSubvectors,
+  traverseSubvectors,
+  zipWithSubvectors,
+  zipWithMSubvectors,
+  sliceSubvectors,
+) where
 
-import Prelude hiding ((^), (*), div, fromIntegral, not, and, or, cycle, iterate, drop, Applicative(..), foldr)
 import Control.Applicative
 import Control.Monad.Fix
 import Control.Monad.Trans.Class
@@ -74,12 +72,13 @@ import Control.Monad.Zip
 import Data.Bits
 import qualified Data.Foldable as F
 import Data.Functor.Identity
-import Data.List.Infinite (Infinite(..))
+import Data.List.Infinite (Infinite (..))
 import qualified Data.List.Infinite as Inf
 import qualified Data.Primitive.Array as A
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Unboxed as U
+import Prelude hiding (Applicative (..), and, cycle, div, drop, foldr, fromIntegral, iterate, not, or, (*), (^))
 
 #ifdef MIN_VERSION_mtl
 import Control.Monad.Reader (MonadReader, ask, local)
@@ -144,10 +143,11 @@ import Data.Chimera.FromIntegral
 -- in constant time.
 --
 -- @since 0.2.0.0
-newtype Chimera v a = Chimera { unChimera :: A.Array (v a) }
+newtype Chimera v a = Chimera {unChimera :: A.Array (v a)}
   deriving
-  ( Functor     -- ^ @since 0.2.0.0
-  )
+    ( Functor
+      -- ^ @since 0.2.0.0
+    )
 
 -- | Streams backed by boxed vectors.
 --
@@ -163,9 +163,11 @@ type UChimera = Chimera U.Vector
 --
 -- @since 0.2.0.0
 instance Applicative (Chimera V.Vector) where
-  pure a = Chimera $ A.arrayFromListN (bits + 1) $
-    G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
-  (<*>)  = zipWithSubvectors (<*>)
+  pure a =
+    Chimera $
+      A.arrayFromListN (bits + 1) $
+        G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
+  (<*>) = zipWithSubvectors (<*>)
 #if __GLASGOW_HASKELL__ > 801
   liftA2 f = zipWithSubvectors (liftA2 f)
 #endif
@@ -223,7 +225,7 @@ tabulate f = runIdentity $ tabulateM (pure . f)
 
 -- | Similar to 'V.generateM', but for raw arrays.
 generateArrayM :: Monad m => Int -> (Int -> m a) -> m (A.Array a)
-generateArrayM n f = A.arrayFromListN n <$> traverse f [0..n - 1]
+generateArrayM n f = A.arrayFromListN n <$> traverse f [0 .. n - 1]
 
 -- | Monadic version of 'tabulate'.
 --
@@ -238,7 +240,6 @@ tabulateM f = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
     tabulateSubVector i = G.generateM ii (\j -> f (int2word (ii + j)))
       where
         ii = 1 `unsafeShiftL` (i - 1)
-
 {-# SPECIALIZE tabulateM :: G.Vector v a => (Word -> Identity a) -> Identity (Chimera v a) #-}
 
 -- | For a given @f@ create a stream of values of a recursive function 'fix' @f@.
@@ -305,19 +306,17 @@ tabulateFixM
   => ((Word -> m a) -> Word -> m a)
   -> m (Chimera v a)
 tabulateFixM = tabulateFixM_ Downwards
-
 {-# SPECIALIZE tabulateFixM :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
 -- | Monadic version of 'tabulateFix''.
 --
 -- @since 0.3.3.0
 tabulateFixM'
-  :: forall m v a.
-     (Monad m, G.Vector v a)
+  :: forall m v a
+   . (Monad m, G.Vector v a)
   => ((Word -> m a) -> Word -> m a)
   -> m (Chimera v a)
 tabulateFixM' = tabulateFixM_ Full
-
 {-# SPECIALIZE tabulateFixM' :: G.Vector v a => ((Word -> Identity a) -> Word -> Identity a) -> Identity (Chimera v a) #-}
 
 -- | Memoization strategy, only used by @tabulateFixM_@.
@@ -325,8 +324,8 @@ data Strategy = Full | Downwards
 
 -- | Internal implementation for 'tabulateFixM' and 'tabulateFixM''.
 tabulateFixM_
-  :: forall m v a.
-     (Monad m, G.Vector v a)
+  :: forall m v a
+   . (Monad m, G.Vector v a)
   => Strategy
   -> ((Word -> m a) -> Word -> m a)
   -> m (Chimera v a)
@@ -336,25 +335,26 @@ tabulateFixM_ strat f = result
     result = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
 
     tabulateSubVector :: Int -> m (v a)
-    tabulateSubVector 0 = G.singleton <$> case strat of
-      Downwards -> fix f 0
-      Full      -> f (\k -> flip index k <$> result) 0
+    tabulateSubVector 0 =
+      G.singleton <$> case strat of
+        Downwards -> fix f 0
+        Full -> f (\k -> flip index k <$> result) 0
     tabulateSubVector i = subResult
       where
-        subResult      = G.generateM ii (\j -> f fixF (int2word (ii + j)))
+        subResult = G.generateM ii (\j -> f fixF (int2word (ii + j)))
         subResultBoxed = V.generateM ii (\j -> f fixF (int2word (ii + j)))
         ii = 1 `unsafeShiftL` (i - 1)
 
         fixF :: Word -> m a
         fixF k
-          | k < int2word ii
-          = flip index k <$> result
-          | k <= int2word ii `shiftL` 1 - 1
-          = (`V.unsafeIndex` (word2int k - ii)) <$> subResultBoxed
-          | otherwise
-          = case strat of
-              Downwards -> f fixF k
-              Full      -> flip index k <$> result
+          | k < int2word ii =
+              flip index k <$> result
+          | k <= int2word ii `shiftL` 1 - 1 =
+              (`V.unsafeIndex` (word2int k - ii)) <$> subResultBoxed
+          | otherwise =
+              case strat of
+                Downwards -> f fixF k
+                Full -> flip index k <$> result
 
 -- | 'iterate' @f@ @x@ returns an infinite stream, generated by
 -- repeated applications of @f@ to @x@.
@@ -390,7 +390,6 @@ iterateM f seed = do
     go vec = do
       nextSeed <- f (G.unsafeLast vec)
       G.iterateNM (G.length vec `shiftL` 1) f nextSeed
-
 {-# SPECIALIZE iterateM :: G.Vector v a => (a -> Identity a) -> a -> Identity (Chimera v a) #-}
 
 -- | 'unfoldr' @f@ @x@ returns an infinite stream, generated by
@@ -423,17 +422,22 @@ unfoldrExactVecNM n f s = flip LazyState.evalStateT s $ do
 -- @since 0.3.3.0
 unfoldrM :: (Monad m, G.Vector v b) => (a -> m (b, a)) -> a -> m (Chimera v b)
 unfoldrM f seed = do
-  let go n s = if n >= bits then pure [] else do
-        (vec, s') <- unfoldrExactVecNM (1 `shiftL` n) f s
-        rest <- go (n + 1) s'
-        pure $ vec : rest
+  let go n s =
+        if n >= bits
+          then pure []
+          else do
+            (vec, s') <- unfoldrExactVecNM (1 `shiftL` n) f s
+            rest <- go (n + 1) s'
+            pure $ vec : rest
   (z, seed') <- unfoldrExactVecNM 1 f seed
   zs <- go 0 seed'
   pure $ Chimera $ A.fromListN (bits + 1) (z : zs)
 
 interleaveVec :: G.Vector v a => v a -> v a -> v a
-interleaveVec as bs = G.generate (G.length as `shiftL` 1)
-  (\n -> (if even n then as else bs) G.! (n `shiftR` 1))
+interleaveVec as bs =
+  G.generate
+    (G.length as `shiftL` 1)
+    (\n -> (if even n then as else bs) G.! (n `shiftR` 1))
 
 -- | Intertleave two streams, sourcing even elements from the first one
 -- and odd elements from the second one.
@@ -446,8 +450,10 @@ interleaveVec as bs = G.generate (G.length as `shiftL` 1)
 interleave :: G.Vector v a => Chimera v a -> Chimera v a -> Chimera v a
 interleave (Chimera as) (Chimera bs) = Chimera $ A.arrayFromListN (bits + 1) vecs
   where
-    vecs = A.indexArray as 0 : A.indexArray bs 0 :
-      map (\i -> interleaveVec (A.indexArray as i) (A.indexArray bs i)) [1 .. bits - 1]
+    vecs =
+      A.indexArray as 0
+        : A.indexArray bs 0
+        : map (\i -> interleaveVec (A.indexArray as i) (A.indexArray bs i)) [1 .. bits - 1]
 
 -- | Index a stream in a constant time.
 --
@@ -459,8 +465,7 @@ interleave (Chimera as) (Chimera bs) = Chimera $ A.arrayFromListN (bits + 1) vec
 index :: G.Vector v a => Chimera v a -> Word -> a
 index (Chimera vs) i =
   (vs `A.indexArray` (bits - lz))
-  `G.unsafeIndex`
-  word2int (i .&. complement ((1 `shiftL` (bits - 1)) `unsafeShiftR` lz))
+    `G.unsafeIndex` word2int (i .&. complement ((1 `shiftL` (bits - 1)) `unsafeShiftR` lz))
   where
     lz :: Int
     !lz = countLeadingZeros i
@@ -492,19 +497,18 @@ toInfinite = foldr (:<)
 -- One should use lazy patterns, e. g.,
 --
 -- > toNonEmpty = foldr (\a ~(x :| xs) -> a :| x : xs)
---
 foldr :: G.Vector v a => (a -> b -> b) -> Chimera v a -> b
 foldr f (Chimera vs) = F.foldr (flip $ G.foldr f) undefined vs
 
 measureOff :: Int -> [a] -> Either Int ([a], [a])
 measureOff n
-  | n <= 0 = Right . ([], )
+  | n <= 0 = Right . ([],)
   | otherwise = go n
   where
     go m [] = Left m
     go 1 (x : xs) = Right ([x], xs)
     go m (x : xs) = case go (m - 1) xs of
-      l@Left{} -> l
+      l@Left {} -> l
       Right (xs', xs'') -> Right (x : xs', xs'')
 
 measureOffVector :: G.Vector v a => Int -> v a -> Either Int (v a, v a)
@@ -520,8 +524,10 @@ measureOffVector n xs
 -- @since 0.3.3.0
 fromListWithDef
   :: G.Vector v a
-  => a   -- ^ Default value
-  -> [a] -- ^ Prefix
+  => a
+  -- ^ Default value
+  -> [a]
+  -- ^ Prefix
   -> Chimera v a
 fromListWithDef a = Chimera . A.fromListN (bits + 1) . go0
   where
@@ -530,8 +536,9 @@ fromListWithDef a = Chimera . A.fromListN (bits + 1) . go0
       x : xs -> G.singleton x : go 0 xs
 
     go k xs = case measureOff kk xs of
-      Left l -> G.fromListN kk (xs ++ replicate l a) :
-        map (\n -> G.replicate (1 `shiftL` n) a) [k + 1 .. bits - 1]
+      Left l ->
+        G.fromListN kk (xs ++ replicate l a)
+          : map (\n -> G.replicate (1 `shiftL` n) a) [k + 1 .. bits - 1]
       Right (ys, zs) -> G.fromListN kk ys : go (k + 1) zs
       where
         kk = 1 `shiftL` k
@@ -558,8 +565,10 @@ fromInfinite = Chimera . A.fromListN (bits + 1) . go0
 -- @since 0.3.3.0
 fromVectorWithDef
   :: G.Vector v a
-  => a   -- ^ Default value
-  -> v a -- ^ Prefix
+  => a
+  -- ^ Default value
+  -> v a
+  -- ^ Prefix
   -> Chimera v a
 fromVectorWithDef a = Chimera . A.fromListN (bits + 1) . go0
   where
@@ -568,8 +577,9 @@ fromVectorWithDef a = Chimera . A.fromListN (bits + 1) . go0
       Just (y, ys) -> G.singleton y : go 0 ys
 
     go k xs = case measureOffVector kk xs of
-      Left l -> (xs G.++ G.replicate l a) :
-        map (\n -> G.replicate (1 `shiftL` n) a) [k + 1 .. bits - 1]
+      Left l ->
+        (xs G.++ G.replicate l a)
+          : map (\n -> G.replicate (1 `shiftL` n) a) [k + 1 .. bits - 1]
       Right (ys, zs) -> ys : go (k + 1) zs
       where
         kk = 1 `shiftL` k
@@ -668,10 +678,14 @@ traverseSubvectors
 traverseSubvectors f (Chimera bs) = Chimera <$> traverse safeF bs
   where
     -- Computing vector length is cheap, so let's check that @f@ preserves length.
-    safeF x = (\fx -> if G.length x == G.length fx then fx else
-        error "traverseSubvectors: the function is not length-preserving") <$> f x
-
-{-# SPECIALIZE traverseSubvectors :: (G.Vector u a, G.Vector v b) => (u a -> Identity (v b)) -> Chimera u a -> Identity (Chimera v b)  #-}
+    safeF x =
+      ( \fx ->
+          if G.length x == G.length fx
+            then fx
+            else error "traverseSubvectors: the function is not length-preserving"
+      )
+        <$> f x
+{-# SPECIALIZE traverseSubvectors :: (G.Vector u a, G.Vector v b) => (u a -> Identity (v b)) -> Chimera u a -> Identity (Chimera v b) #-}
 
 -- | Zip subvectors from two streams, using a given length-preserving function.
 --
@@ -697,9 +711,13 @@ zipWithMSubvectors
 zipWithMSubvectors f (Chimera bs1) (Chimera bs2) = Chimera <$> sequenceA (mzipWith safeF bs1 bs2)
   where
     -- Computing vector length is cheap, so let's check that @f@ preserves length.
-    safeF x y = (\fx -> if G.length x == G.length fx then fx else
-        error "traverseSubvectors: the function is not length-preserving") <$> f x y
-
+    safeF x y =
+      ( \fx ->
+          if G.length x == G.length fx
+            then fx
+            else error "traverseSubvectors: the function is not length-preserving"
+      )
+        <$> f x y
 {-# SPECIALIZE zipWithMSubvectors :: (G.Vector u a, G.Vector v b, G.Vector w c) => (u a -> v b -> Identity (w c)) -> Chimera u a -> Chimera v b -> Identity (Chimera w c) #-}
 
 -- | Take a slice of 'Chimera', represented as a list on consecutive subvectors.
@@ -707,8 +725,10 @@ zipWithMSubvectors f (Chimera bs1) (Chimera bs2) = Chimera <$> sequenceA (mzipWi
 -- @since 0.3.3.0
 sliceSubvectors
   :: G.Vector v a
-  => Int -- ^ How many initial elements to drop?
-  -> Int -- ^ How many subsequent elements to take?
+  => Int
+  -- ^ How many initial elements to drop?
+  -> Int
+  -- ^ How many subsequent elements to take?
   -> Chimera v a
   -> [v a]
 sliceSubvectors off len = doTake len . doDrop off . F.toList . unChimera
