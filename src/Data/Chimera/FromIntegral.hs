@@ -4,7 +4,7 @@
 -- |
 -- Module:      Data.Chimera.FromIntegral
 -- Copyright:   (c) 2018 Andrew Lelechenko
--- Licence:     MIT
+-- Licence:     BSD3
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 module Data.Chimera.FromIntegral (
   word2int,

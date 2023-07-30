@@ -13,7 +13,7 @@
 -- |
 -- Module:      Data.Chimera
 -- Copyright:   (c) 2018-2019 Andrew Lelechenko
--- Licence:     MIT
+-- Licence:     BSD3
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
 -- Lazy infinite streams with O(1) indexing.

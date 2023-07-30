@@ -8,7 +8,7 @@
 -- |
 -- Module:      Data.Chimera.Compat
 -- Copyright:   (c) 2023 Andrew Lelechenko
--- Licence:     MIT
+-- Licence:     BSD3
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
 -- See https://gitlab.haskell.org/ghc/ghc/-/issues/22933

@@ -1,7 +1,7 @@
 -- |
 -- Module:      Data.Chimera.ContinuousMapping
 -- Copyright:   (c) 2017 Andrew Lelechenko
--- Licence:     MIT
+-- Licence:     BSD3
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
 -- Helpers for continuous mappings, useful to memoize

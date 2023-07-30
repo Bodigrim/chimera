@@ -7,7 +7,7 @@
 -- |
 -- Module:      Data.Chimera.WheelMapping
 -- Copyright:   (c) 2017 Andrew Lelechenko
--- Licence:     MIT
+-- Licence:     BSD3
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
 -- Helpers for mapping to <http://mathworld.wolfram.com/RoughNumber.html rough numbers>
