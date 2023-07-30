@@ -81,7 +81,8 @@ module Data.Chimera.WheelMapping (
 ) where
 
 import Data.Bits
-import GHC.Exts
+import Data.Chimera.Compat
+import GHC.Exts hiding (timesWord2#)
 
 bits :: Int
 bits = finiteBitSize (0 :: Word)

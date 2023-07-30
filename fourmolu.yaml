@@ -8,3 +8,4 @@ newlines-between-decls: 1
 haddock-style: single-line
 respectful: true
 fixities: []
+single-constraint-parens: never

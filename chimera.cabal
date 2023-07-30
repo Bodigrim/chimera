@@ -1,16 +1,16 @@
-cabal-version:   2.0
-name:            chimera
-version:         0.3.3.0
-license:         BSD3
-license-file:    LICENSE
-copyright:       2017-2019 Bodigrim
-maintainer:      andrew.lelechenko@gmail.com
-author:          Bodigrim
+cabal-version:      2.0
+name:               chimera
+version:            0.3.3.0
+license:            BSD3
+license-file:       LICENSE
+copyright:          2017-2019 Bodigrim
+maintainer:         andrew.lelechenko@gmail.com
+author:             Bodigrim
 tested-with:
     ghc ==9.6.1 ghc ==9.4.4 ghc ==9.2.7 ghc ==9.0.2 ghc ==8.10.7
     ghc ==8.8.4 ghc ==8.6.5 ghc ==8.4.4 ghc ==8.2.2 ghc ==8.0.2
 
-homepage:        https://github.com/Bodigrim/chimera#readme
+homepage:           https://github.com/Bodigrim/chimera#readme
 synopsis:
     Lazy infinite streams with O(1) indexing and applications for memoization
 
@@ -40,8 +40,9 @@ description:
     * memoization of functions of several, possibly signed arguments,
     * efficient memoization of boolean predicates.
 
-category:        Data
-build-type:      Simple
+category:           Data
+build-type:         Simple
+extra-source-files: cbits/aarch64.h
 extra-doc-files:
     README.md
     changelog.md
@@ -60,7 +61,10 @@ library
         Data.Chimera.WheelMapping
 
     hs-source-dirs:   src
-    other-modules:    Data.Chimera.FromIntegral
+    other-modules:
+        Data.Chimera.FromIntegral
+        Data.Chimera.Compat
+
     default-language: Haskell2010
     ghc-options:      -Wall -Wcompat
     build-depends:
@@ -69,6 +73,10 @@ library
         primitive <0.9,
         transformers <0.7,
         vector <0.14
+
+    if arch(aarch64)
+        c-sources:    cbits/aarch64.c
+        include-dirs: cbits
 
     if flag(representable)
         build-depends:
