@@ -103,6 +103,19 @@ chimeraTests = testGroup "Chimera"
       let jx = ix `mod` 65536 in
         iterate f seed !! fromIntegral jx === Ch.index (Ch.iterate f seed :: UChimera Word) jx
 
+  , QC.testProperty "head . iterate" $
+    \(Fun _ (f :: Word -> Word)) seed ->
+        seed === Ch.index (Ch.iterate f seed :: UChimera Word) 0
+
+  , QC.testProperty "iterateWithIndex" $
+    \(Fun _ (f :: (Word, Int) -> Int)) seed ix ->
+      let jx = ix `mod` 65536 in
+        iterateWithIndex (curry f) seed !! fromIntegral jx === Ch.index (Ch.iterateWithIndex (curry f) seed :: UChimera Int) jx
+
+  , QC.testProperty "head . iterateWithIndex" $
+    \(Fun _ (f :: (Word, Int) -> Int)) seed ->
+        seed === Ch.index (Ch.iterateWithIndex (curry f) seed :: UChimera Int) 0
+
   , QC.testProperty "unfoldr" $
     \(Fun _ (f :: Word -> (Int, Word))) seed ix ->
       let jx = ix `mod` 65536 in
@@ -171,3 +184,6 @@ mkUnfix splt f x
   $ map f
   $ takeWhile (\y -> 0 <= y && y < x)
   $ splt x
+
+iterateWithIndex :: (Word -> a -> a) -> a -> [a]
+iterateWithIndex f seed = L.unfoldr (\(ix, a) -> let a' = f (ix + 1) a in Just (a, (ix + 1, a'))) (0, seed)
