@@ -70,7 +70,7 @@ library
     build-depends:
         base >=4.9 && <5,
         infinite-list <0.2,
-        primitive <0.9,
+        primitive <0.10,
         transformers <0.7,
         vector <0.14
 
