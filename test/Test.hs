@@ -7,7 +7,7 @@ module Main where
 import Test.QuickCheck.Function
 import Test.Tasty
 import Test.Tasty.HUnit as H
-import Test.Tasty.QuickCheck as QC
+import Test.Tasty.QuickCheck as QC hiding ((.&.))
 
 import Data.Bits
 import Data.Foldable
@@ -44,17 +44,29 @@ contMapTests = testGroup "ContinuousMapping"
     ]
 
   , testGroup "to . from Z-curve 2D"
-    [ QC.testProperty "random" $ \z -> uncurry toZCurve (fromZCurve z) === z
+    [ QC.testProperty "random" $ \z ->
+      let mask = (1 `shiftL` ((finiteBitSize (0 :: Word) `shiftR` 1) `shiftL` 1)) - 1 in
+      uncurry toZCurve (fromZCurve z) ===
+        z .&. mask
     ]
   , testGroup "from . to Z-curve 2D"
-    [ QC.testProperty "random" $ \x y -> fromZCurve (toZCurve x y) === (x `rem` (1 `shiftL` 32), y `rem` (1 `shiftL` 32))
+    [ QC.testProperty "random" $ \x y ->
+      let mask = (1 `shiftL` (finiteBitSize (0 :: Word) `shiftR` 1)) - 1 in
+        fromZCurve (toZCurve x y) ===
+          (x .&. mask, y .&. mask)
     ]
 
   , testGroup "to . from Z-curve 3D"
-    [ QC.testProperty "random" $ \t -> (\(x, y, z) -> toZCurve3 x y z) (fromZCurve3 t) === t `rem` (1 `shiftL` 63)
+    [ QC.testProperty "random" $ \t ->
+      let mask = (1 `shiftL` (finiteBitSize (0 :: Word) `quot` 3) * 3) - 1 in
+        (\(x, y, z) -> toZCurve3 x y z) (fromZCurve3 t) ===
+          t .&. mask
     ]
   , testGroup "from . to Z-curve 3D"
-    [ QC.testProperty "random" $ \x y z -> fromZCurve3 (toZCurve3 x y z) === (x `rem` (1 `shiftL` 21), y `rem` (1 `shiftL` 21), z `rem` (1 `shiftL` 21))
+    [ QC.testProperty "random" $ \x y z ->
+      let mask = (1 `shiftL` (finiteBitSize (0 :: Word) `quot` 3)) - 1 in
+        fromZCurve3 (toZCurve3 x y z) ===
+          (x .&. mask, y .&. mask, z .&. mask)
     ]
   ]
 
