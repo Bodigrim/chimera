@@ -149,6 +149,10 @@ newtype Chimera v a = Chimera {unChimera :: A.Array (v a)}
   deriving
     ( Functor
       -- ^ @since 0.2.0.0
+    , Foldable
+      -- ^ @since 0.2.0.0
+    , Traversable
+      -- ^ @since 0.2.0.0
     )
 
 -- | Streams backed by boxed vectors.
@@ -447,7 +451,7 @@ unfoldrM f seed = do
 -- >>> take 10 (toList ch)
 -- [100,101,103,106,110,115,121,128,136,145]
 --
--- @since 0.4.0.0
+-- @since 0.3.4.0
 iterateWithIndex :: G.Vector v a => (Word -> a -> a) -> a -> Chimera v a
 iterateWithIndex f = runIdentity . iterateWithIndexM ((pure .) . f)
 
@@ -461,7 +465,7 @@ iterateWithIndexExactVecNM n f s = G.unfoldrExactNM n go (int2word n, s)
 
 -- | Monadic version of 'iterateWithIndex'.
 --
--- @since 0.4.0.0
+-- @since 0.3.4.0
 iterateWithIndexM :: (Monad m, G.Vector v a) => (Word -> a -> m a) -> a -> m (Chimera v a)
 iterateWithIndexM f seed = do
   nextSeed <- f 1 seed
@@ -523,7 +527,7 @@ toList (Chimera vs) = foldMap G.toList vs
 
 -- | Convert a stream to a proper infinite list.
 --
--- @since 0.4.0.0
+-- @since 0.3.4.0
 toInfinite :: G.Vector v a => Chimera v a -> Infinite a
 toInfinite = foldr (:<)
 
@@ -585,7 +589,7 @@ fromListWithDef a = Chimera . A.fromListN (bits + 1) . go0
 
 -- | Create a stream of values from a given infinite list.
 --
--- @since 0.4.0.0
+-- @since 0.3.4.0
 fromInfinite
   :: G.Vector v a
   => Infinite a
