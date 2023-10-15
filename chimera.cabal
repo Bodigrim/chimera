@@ -1,6 +1,6 @@
 cabal-version:      2.0
 name:               chimera
-version:            0.3.3.0
+version:            0.3.4.0
 license:            BSD3
 license-file:       LICENSE
 copyright:          2017-2019 Bodigrim
