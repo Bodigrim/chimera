@@ -62,8 +62,10 @@ library
 
     hs-source-dirs:   src
     other-modules:
-        Data.Chimera.FromIntegral
         Data.Chimera.Compat
+        Data.Chimera.FromIntegral
+        Data.Chimera.Internal
+        Data.Chimera.Memoize
 
     default-language: Haskell2010
     ghc-options:      -Wall -Wcompat
