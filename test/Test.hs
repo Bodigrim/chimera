@@ -199,3 +199,9 @@ mkUnfix splt f x
 
 iterateWithIndex :: (Word -> a -> a) -> a -> [a]
 iterateWithIndex f seed = L.unfoldr (\(ix, a) -> let a' = f (ix + 1) a in Just (a, (ix + 1, a'))) (0, seed)
+
+instance Arbitrary HalfWord where
+  arbitrary = fromIntegral <$> (arbitrary :: Gen Word)
+
+instance Arbitrary ThirdWord where
+  arbitrary = fromIntegral <$> (arbitrary :: Gen Word)

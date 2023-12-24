@@ -1,3 +1,8 @@
+# 0.4.0.0
+
+* Add `HalfWord` and `ThirdWord` types,
+  change types of `toZCurve`, `fromZCurve`, `toZCurve3`, `fromZCurve3` accordingly.
+
 # 0.3.4.0
 
 * Add `foldr` catamorphism and `fromInfinite` / `toInfinite` conversions.
