@@ -175,9 +175,7 @@ instance Applicative (Chimera V.Vector) where
       A.arrayFromListN (bits + 1) $
         G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
   (<*>) = zipWithSubvectors (<*>)
-#if __GLASGOW_HASKELL__ > 801
   liftA2 f = zipWithSubvectors (liftA2 f)
-#endif
 
 -- | @since 0.3.1.0
 instance Monad (Chimera V.Vector) where
