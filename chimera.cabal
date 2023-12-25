@@ -106,6 +106,7 @@ benchmark chimera-bench
     type:             exitcode-stdio-1.0
     main-is:          Bench.hs
     hs-source-dirs:   bench
+    other-modules:    Read
     default-language: Haskell2010
     ghc-options:      -Wall -Wcompat
     build-depends:
