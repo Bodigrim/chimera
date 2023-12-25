@@ -1,7 +1,7 @@
-cabal-version:      2.0
+cabal-version:      2.2
 name:               chimera
 version:            0.3.4.0
-license:            BSD3
+license:            BSD-3-Clause
 license-file:       LICENSE
 copyright:          2017-2019 Bodigrim
 maintainer:         andrew.lelechenko@gmail.com
@@ -74,7 +74,7 @@ library
         infinite-list <0.2,
         primitive <0.10,
         transformers <0.7,
-        vector <0.14
+        vector <0.14,
 
     if arch(aarch64)
         c-sources:    cbits/aarch64.c
@@ -84,7 +84,7 @@ library
         build-depends:
             adjunctions <4.5,
             distributive <0.7,
-            mtl <2.4
+            mtl <2.4,
 
 test-suite chimera-test
     type:             exitcode-stdio-1.0
@@ -100,13 +100,16 @@ test-suite chimera-test
         tasty-hunit <0.11,
         tasty-quickcheck <0.11,
         tasty-smallcheck <0.9,
-        vector
+        vector,
 
 benchmark chimera-bench
     type:             exitcode-stdio-1.0
     main-is:          Bench.hs
     hs-source-dirs:   bench
-    other-modules:    Read
+    other-modules:
+        Memoize
+        Read
+
     default-language: Haskell2010
     ghc-options:      -Wall -Wcompat
     build-depends:
@@ -115,4 +118,5 @@ benchmark chimera-bench
         mtl,
         random <1.3,
         tasty >=1.4.2,
-        tasty-bench >=0.3.2 && <0.4
+        tasty-bench >=0.3.2 && <0.4,
+        vector,
