@@ -133,6 +133,10 @@ Let us measure the maximal length of [Collatz sequence](https://oeis.org/A006577
 using `chimera` and `memoize` packages.
 
 ```haskell
+#!/usr/bin/env cabal
+{- cabal:
+build-depends: base, chimera, memoize, time
+-}
 {-# LANGUAGE TypeApplications #-}
 import Data.Chimera
 import Data.Function.Memoize
