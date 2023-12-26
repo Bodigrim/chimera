@@ -28,10 +28,17 @@ import Data.Chimera.Internal
 -- would compute @f@ @n@ only once
 -- and cache the result in 'VChimera'.
 -- This is just a shortcut for 'index' '.' 'tabulate'.
--- When @a@ is 'U.Unbox', it is faster to use
--- 'index' ('tabulate' @f@ :: 'UChimera' @a@).
 --
 -- prop> memoize f n = f n
+--
+-- Note that @a@ could be a function type itself. This allows, for instance,
+-- to define
+--
+-- > memoize2 :: (Word -> Word -> a) -> Word -> Word -> a
+-- > memoize2 = memoize . (memoize .)
+-- >
+-- > memoize3 :: (Word -> Word -> Word -> a) -> Word -> Word -> Word -> a
+-- > memoize3 = memoize . (memoize2 .)
 --
 -- @since 0.3.0.0
 memoize :: (Word -> a) -> (Word -> a)
@@ -40,8 +47,6 @@ memoize = index @V.Vector . tabulate
 -- | For a given @f@ memoize a recursive function 'fix' @f@,
 -- caching results in 'VChimera'.
 -- This is just a shortcut for 'index' '.' 'tabulateFix'.
--- When @a@ is 'U.Unbox', it is faster to use
--- 'index' ('tabulateFix' @f@ :: 'UChimera' @a@).
 --
 -- prop> memoizeFix f n = fix f n
 --
@@ -64,14 +69,22 @@ memoize = index @V.Vector . tabulate
 --
 -- This function can be used even when arguments
 -- of recursive calls are not strictly decreasing,
--- but they might not get memoized. If this is not desired
--- use 'tabulateFix'' instead.
+-- but they might not get memoized.
 -- For example, here is a routine to measure the length of
 -- <https://oeis.org/A006577 Collatz sequence>:
 --
 -- >>> collatzF f n = if n <= 1 then 0 else 1 + f (if even n then n `quot` 2 else 3 * n + 1)
 -- >>> memoizeFix collatzF 27
 -- 111
+--
+-- If you want to memoize all recursive calls, even with increasing arguments,
+-- you can employ another function of the same signature:
+-- 'Data.Function.fix' '.' ('memoize' '.'). It is less efficient though.
+--
+-- To memoize recursive functions of multiple arguments, one can use
+--
+-- > memoizeFix2 :: ((Word -> Word -> a) -> Word -> Word -> a) -> Word -> Word -> a
+-- > memoizeFix2 = let memoize2 = memoize . (memoize .) in Data.Function.fix . (memoize2 .)
 --
 -- @since 0.3.0.0
 memoizeFix :: ((Word -> a) -> Word -> a) -> (Word -> a)

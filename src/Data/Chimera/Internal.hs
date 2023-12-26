@@ -177,6 +177,10 @@ bits = finiteBitSize (0 :: Word)
 -- >>> take 10 (toList ch)
 -- [0,1,4,9,16,25,36,49,64,81]
 --
+-- Note that @a@ could be a function type itself,
+-- so one can tabulate a function of multiple arguments
+-- as a nested 'Chimera' of 'Chimera's.
+--
 -- @since 0.2.0.0
 tabulate :: G.Vector v a => (Word -> a) -> Chimera v a
 tabulate f = runIdentity $ tabulateM (coerce f)
@@ -226,6 +230,11 @@ tabulateM f = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
 -- __Note__: Only recursive function calls with decreasing arguments are memoized.
 -- If full memoization is desired, use 'tabulateFix'' instead.
 --
+-- Using unboxed \/ storable \/ primitive vectors with 'tabulateFix' is not always a win:
+-- the internal memoizing routine necessarily uses boxed vectors to achieve
+-- a certain degree of laziness, so converting to 'UChimera' is extra work.
+-- This could pay off in a long run by reducing memory residence though.
+--
 -- @since 0.2.0.0
 tabulateFix :: (G.Vector v a, Typeable v) => ((Word -> a) -> Word -> a) -> Chimera v a
 tabulateFix uf = runIdentity $ tabulateFixM (coerce uf)
@@ -251,6 +260,9 @@ tabulateFix uf = runIdentity $ tabulateFixM (coerce uf)
 --
 -- >>> maximumBy (comparing $ memoizeFix collatzF) [0..1000000]
 -- 56991483520
+--
+-- Since 'tabulateFix'' memoizes all recursive calls, even with increasing argument,
+-- you most likely do not want to use it with anything else than boxed vectors ('VChimera').
 --
 -- @since 0.3.2.0
 tabulateFix' :: (G.Vector v a, Typeable v) => ((Word -> a) -> Word -> a) -> Chimera v a
