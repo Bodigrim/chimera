@@ -7,6 +7,7 @@
 
 # 0.3.4.0
 
+* Breaking change: remove deprecated `zipSubvectors`, use `zipWithSubvectors`.
 * Add `foldr` catamorphism and `fromInfinite` / `toInfinite` conversions.
 * Add `iterateWithIndex` and `iterateWithIndexM`.
 

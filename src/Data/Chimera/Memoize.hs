@@ -44,7 +44,7 @@ import Data.Chimera.Internal
 memoize :: (Word -> a) -> (Word -> a)
 memoize = index @V.Vector . tabulate
 
--- | For a given @f@ memoize a recursive function 'fix' @f@,
+-- | For a given @f@ memoize a recursive function 'Data.Function.fix' @f@,
 -- caching results in 'VChimera'.
 -- This is just a shortcut for 'index' '.' 'tabulateFix'.
 --
@@ -55,7 +55,7 @@ memoize = index @V.Vector . tabulate
 --
 -- >>> fibo n = if n < 2 then toInteger n else fibo (n - 1) + fibo (n - 2)
 --
--- Can we find @fiboF@ such that @fibo@ = 'fix' @fiboF@?
+-- Can we find @fiboF@ such that @fibo@ = 'Data.Function.fix' @fiboF@?
 -- Just replace all recursive calls to @fibo@ with @f@:
 --
 -- >>> fiboF f n = if n < 2 then toInteger n else f (n - 1) + f (n - 2)

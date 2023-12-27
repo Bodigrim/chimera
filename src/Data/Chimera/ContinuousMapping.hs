@@ -175,7 +175,7 @@ contramapToZCurve
 contramapToZCurve f = (f .) . toZCurve
 
 -- | For an input function @f@ return function @g@ such that
--- 'fix' @f@ = throughZCurve ('fix' @g@).
+-- 'Data.Function.fix' @f@ = ('Data.Function.fix' @g@ '.') '.' 'toZCurve'.
 --
 -- @since 0.4.0.0
 throughZCurveFix
@@ -285,7 +285,7 @@ contramapToZCurve3
 contramapToZCurve3 f = ((f .) .) . toZCurve3
 
 -- | For an input function @f@ return function @g@ such that
--- 'fix' @f@ = throughZCurve ('fix' @g@).
+-- 'Data.Function.fix' @f@ = (('Data.Function.fix' @g@ '.') '.') '.' 'toZCurve3'.
 --
 -- @since 0.4.0.0
 throughZCurveFix3

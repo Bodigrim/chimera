@@ -44,7 +44,6 @@ module Data.Chimera.Internal (
   toInfinite,
 
   -- * Monadic construction
-  -- $monadic
   tabulateM,
   tabulateFixM,
   tabulateFixM',
@@ -53,7 +52,6 @@ module Data.Chimera.Internal (
   unfoldrM,
 
   -- * Subvectors
-  -- $subvectors
   mapSubvectors,
   traverseSubvectors,
   zipWithSubvectors,
@@ -202,7 +200,7 @@ tabulateM f = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
 {-# INLINEABLE tabulateM #-}
 {-# SPECIALIZE tabulateM :: G.Vector v a => (Word -> Identity a) -> Identity (Chimera v a) #-}
 
--- | For a given @f@ create a stream of values of a recursive function 'fix' @f@.
+-- | For a given @f@ create a stream of values of a recursive function 'Data.Function.fix' @f@.
 -- Once created it can be accessed via 'index' or 'toList'.
 --
 -- For example, imagine that we want to tabulate
@@ -210,7 +208,7 @@ tabulateM f = Chimera <$> generateArrayM (bits + 1) tabulateSubVector
 --
 -- >>> catalan n = if n == 0 then 1 else sum [ catalan i * catalan (n - 1 - i) | i <- [0 .. n - 1] ]
 --
--- Can we find @catalanF@ such that @catalan@ = 'fix' @catalanF@?
+-- Can we find @catalanF@ such that @catalan@ = 'Data.Function.fix' @catalanF@?
 -- Just replace all recursive calls to @catalan@ with @f@:
 --
 -- >>> catalanF f n = if n == 0 then 1 else sum [ f i * f (n - 1 - i) | i <- [0 .. n - 1] ]
@@ -252,7 +250,7 @@ tabulateFix uf = runIdentity $ tabulateFixM (coerce uf)
 -- >>> maximumBy (comparing $ index $ tabulateFix' collatzF) [0..1000000]
 -- ...
 --
--- Using 'memoizeFix' instead fixes the problem:
+-- Using 'Data.Chimera.memoizeFix' instead fixes the problem:
 --
 -- >>> maximumBy (comparing $ memoizeFix collatzF) [0..1000000]
 -- 56991483520
