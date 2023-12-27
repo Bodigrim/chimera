@@ -86,9 +86,11 @@ module Data.Chimera.ContinuousMapping (
   HalfWord,
   toZCurve,
   fromZCurve,
+  throughZCurveFix,
   ThirdWord,
   toZCurve3,
   fromZCurve3,
+  throughZCurveFix3,
 ) where
 
 import Data.Bifunctor
@@ -159,6 +161,28 @@ toZCurve x y = part1by1 y `shiftL` 1 .|. part1by1 x
 -- @since 0.2.0.0
 fromZCurve :: Word -> (HalfWord, HalfWord)
 fromZCurve z = (compact1by1 z, compact1by1 (z `shiftR` 1))
+
+-- | Convert a function of two 'HalfWord's to a function of one 'Word'.
+contramapFromZCurve
+  :: (HalfWord -> HalfWord -> a)
+  -> (Word -> a)
+contramapFromZCurve f = uncurry f . fromZCurve
+
+-- | Convert a function of one 'Word' to a function of two 'HalfWord's.
+contramapToZCurve
+  :: (Word -> a)
+  -> (HalfWord -> HalfWord -> a)
+contramapToZCurve f = (f .) . toZCurve
+
+-- | For an input function @f@ return function @g@ such that
+-- 'fix' @f@ = throughZCurve ('fix' @g@).
+--
+-- @since 0.4.0.0
+throughZCurveFix
+  :: ((HalfWord -> HalfWord -> a) -> (HalfWord -> HalfWord -> a))
+  -> (Word -> a)
+  -> (Word -> a)
+throughZCurveFix f = contramapFromZCurve . f . contramapToZCurve
 
 -- | 21 bits on 64-bit architecture, 10 bits on 32-bit architecture.
 --
@@ -245,6 +269,30 @@ toZCurve3 x y z = part1by2 z `shiftL` 2 .|. part1by2 y `shiftL` 1 .|. part1by2 x
 -- @since 0.2.0.0
 fromZCurve3 :: Word -> (ThirdWord, ThirdWord, ThirdWord)
 fromZCurve3 z = (compact1by2 z, compact1by2 (z `shiftR` 1), compact1by2 (z `shiftR` 2))
+
+-- | Convert a function of two 'HalfWord's to a function of one 'Word'.
+contramapFromZCurve3
+  :: (ThirdWord -> ThirdWord -> ThirdWord -> a)
+  -> (Word -> a)
+contramapFromZCurve3 f = uncurry3 f . fromZCurve3
+  where
+    uncurry3 func (a, b, c) = func a b c
+
+-- | Convert a function of one 'Word' to a function of two 'HalfWord's.
+contramapToZCurve3
+  :: (Word -> a)
+  -> (ThirdWord -> ThirdWord -> ThirdWord -> a)
+contramapToZCurve3 f = ((f .) .) . toZCurve3
+
+-- | For an input function @f@ return function @g@ such that
+-- 'fix' @f@ = throughZCurve ('fix' @g@).
+--
+-- @since 0.4.0.0
+throughZCurveFix3
+  :: ((ThirdWord -> ThirdWord -> ThirdWord -> a) -> (ThirdWord -> ThirdWord -> ThirdWord -> a))
+  -> (Word -> a)
+  -> (Word -> a)
+throughZCurveFix3 f = contramapFromZCurve3 . f . contramapToZCurve3
 
 -- Inspired by https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
 part1by1 :: HalfWord -> Word

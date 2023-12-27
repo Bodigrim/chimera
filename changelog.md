@@ -2,8 +2,7 @@
 
 * Add `HalfWord` and `ThirdWord` types,
   change types of `toZCurve`, `fromZCurve`, `toZCurve3`, `fromZCurve3` accordingly.
-* New module `Data.Chimera.Memoize` providing various
-  memoization combinators.
+* Add `throughZCurveFix` and `throughZCurveFix3`.
 
 # 0.3.4.0
 
