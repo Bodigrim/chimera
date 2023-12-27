@@ -53,6 +53,7 @@ module Data.Chimera.Internal (
 
   -- * Subvectors
   mapSubvectors,
+  imapSubvectors,
   traverseSubvectors,
   zipWithSubvectors,
   zipWithMSubvectors,
@@ -623,6 +624,27 @@ mapSubvectors
   -> Chimera u a
   -> Chimera v b
 mapSubvectors f = runIdentity . traverseSubvectors (coerce f)
+
+-- | Map subvectors of a stream, using a given length-preserving function.
+-- The first argument of the function is the index of the first element of subvector
+-- in the 'Chimera'.
+--
+-- @since 0.4.0.0
+imapSubvectors
+  :: (G.Vector u a, G.Vector v b)
+  => (Word -> u a -> v b)
+  -> Chimera u a
+  -> Chimera v b
+imapSubvectors f (Chimera bs) = Chimera $ mzipWith safeF (fromListN (bits + 1) [0 .. bits]) bs
+  where
+    -- Computing vector length is cheap, so let's check that @f@ preserves length.
+    safeF i x =
+      if xLen == G.length fx
+        then fx
+        else error "imapSubvectors: the function is not length-preserving"
+      where
+        xLen = G.length x
+        fx = f (if i == 0 then 0 else 1 `unsafeShiftL` (i - 1)) x
 
 -- | Traverse subvectors of a stream, using a given length-preserving function.
 --

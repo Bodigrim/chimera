@@ -48,6 +48,7 @@ module Data.Chimera (
   -- * Subvectors
   -- $subvectors
   mapSubvectors,
+  imapSubvectors,
   traverseSubvectors,
   zipWithSubvectors,
   zipWithMSubvectors,

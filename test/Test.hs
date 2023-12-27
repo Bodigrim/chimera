@@ -165,12 +165,19 @@ chimeraTests = testGroup "Chimera"
           (if fromIntegral jx < length xs then vs G.! fromIntegral jx else x) ===
             Ch.index (Ch.fromVectorWithDef x vs :: UChimera Bool) jx
 
-  , QC.testProperty "mapWithKey" $
+  , QC.testProperty "mapSubvectors" $
     \(Blind bs) (Fun _ (g :: Word -> Word)) ix ->
       let jx = ix `mod` 65536 in
         g (Ch.index bs jx) === Ch.index (Ch.mapSubvectors (G.map g) bs :: UChimera Word) jx
 
-  , QC.testProperty "zipWithKey" $
+  , QC.testProperty "imapSubvectors" $
+    \(Blind bs) (Fun _ (g :: (Word, Int) -> Char)) ix ->
+      let jx = ix `mod` 65536 in
+        curry g jx (Ch.index bs jx) ===
+          Ch.index (Ch.imapSubvectors (\off ->
+            G.imap (curry g . (+ off) . fromIntegral)) bs :: UChimera Char) jx
+
+  , QC.testProperty "zipWithSubvectors" $
     \(Blind bs1) (Blind bs2) (Fun _ (g :: (Word, Word) -> Word)) ix ->
       let jx = ix `mod` 65536 in
         g (Ch.index bs1 jx, Ch.index bs2 jx) === Ch.index (Ch.zipWithSubvectors (G.zipWith (curry g)) bs1 bs2 :: UChimera Word) jx

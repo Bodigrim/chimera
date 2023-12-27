@@ -4,6 +4,7 @@
 * Add `HalfWord` and `ThirdWord` types,
   change types of `toZCurve`, `fromZCurve`, `toZCurve3`, `fromZCurve3` accordingly.
 * Add `throughZCurveFix` and `throughZCurveFix3`.
+* Add `imapSubvectors`.
 
 # 0.3.4.0
 
