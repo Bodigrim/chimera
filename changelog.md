@@ -1,5 +1,6 @@
 # 0.4.0.0
 
+* Remove instances `Foldable` and `Traversable`, they are too dangerous to diverge.
 * Add `HalfWord` and `ThirdWord` types,
   change types of `toZCurve`, `fromZCurve`, `toZCurve3`, `fromZCurve3` accordingly.
 * Add `throughZCurveFix` and `throughZCurveFix3`.
