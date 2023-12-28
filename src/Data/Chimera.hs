@@ -29,6 +29,7 @@ module Data.Chimera (
 
   -- * Manipulation
   interleave,
+  prependVector,
 
   -- * Elimination
   index,

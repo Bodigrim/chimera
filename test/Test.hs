@@ -165,6 +165,13 @@ chimeraTests = testGroup "Chimera"
           (if fromIntegral jx < length xs then vs G.! fromIntegral jx else x) ===
             Ch.index (Ch.fromVectorWithDef x vs :: UChimera Bool) jx
 
+  , QC.testProperty "prependVector" $
+    \(Blind bs) xs ix ->
+      let jx = ix `mod` 65536 in
+        let vs = G.fromList xs in
+          (if fromIntegral jx < length xs then vs G.! fromIntegral jx else Ch.index bs (min 65555 $ jx - fromIntegral (length xs))) ===
+            Ch.index (Ch.prependVector vs bs :: UChimera Bool) jx
+
   , QC.testProperty "mapSubvectors" $
     \(Blind bs) (Fun _ (g :: Word -> Word)) ix ->
       let jx = ix `mod` 65536 in

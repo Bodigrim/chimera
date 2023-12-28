@@ -5,6 +5,7 @@
   change types of `toZCurve`, `fromZCurve`, `toZCurve3`, `fromZCurve3` accordingly.
 * Add `throughZCurveFix` and `throughZCurveFix3`.
 * Add `imapSubvectors`.
+* Add `prependVector`.
 
 # 0.3.4.0
 

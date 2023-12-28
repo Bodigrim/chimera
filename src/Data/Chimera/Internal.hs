@@ -10,6 +10,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- |
 -- Module:      Data.Chimera.Internal
@@ -36,6 +37,7 @@ module Data.Chimera.Internal (
 
   -- * Manipulation
   interleave,
+  prependVector,
 
   -- * Elimination
   index,
@@ -599,6 +601,45 @@ fromVectorWithDef a = Chimera . fromListN (bits + 1) . go0
       Right (ys, zs) -> ys : go (k + 1) zs
       where
         kk = 1 `shiftL` k
+
+-- | Prepend a given vector to a stream of values.
+--
+-- @since 0.4.0.0
+prependVector
+  :: forall v a
+   . G.Vector v a
+  => v a
+  -> Chimera v a
+  -> Chimera v a
+prependVector (G.uncons -> Nothing) ch = ch
+prependVector (G.uncons -> Just (pref0, pref)) (Chimera as) =
+  Chimera $
+    fromListN (bits + 1) $
+      fmap sliceAndConcat $
+        [LazySlice 0 1 $ G.singleton pref0] : go 0 1 0 inputs
+  where
+    inputs :: [(Word, v a)]
+    inputs =
+      (int2word $ G.length pref, pref)
+        : zip (1 : map (1 `unsafeShiftL`) [0 .. bits - 1]) (F.toList as)
+
+    go :: Int -> Word -> Word -> [(Word, t)] -> [[LazySlice t]]
+    go _ _ _ [] = []
+    go n need off orig@((lt, t) : rest)
+      | n >= bits = []
+      | otherwise = case compare (off + need) lt of
+          LT -> [LazySlice off need t] : go (n + 1) (1 `shiftL` (n + 1)) (off + need) orig
+          EQ -> [LazySlice off need t] : go (n + 1) (1 `shiftL` (n + 1)) 0 rest
+          GT -> case go n (off + need - lt) 0 rest of
+            [] -> error "prependVector: the stream should not get exhausted prematurely"
+            hd : tl -> (LazySlice off (lt - off) t : hd) : tl
+
+data LazySlice a = LazySlice !Word !Word a
+
+sliceAndConcat :: G.Vector v a => [LazySlice (v a)] -> v a
+sliceAndConcat =
+  G.concat
+    . map (\(LazySlice from len vec) -> G.slice (word2int from) (word2int len) vec)
 
 -- | Return an infinite repetition of a given vector.
 -- Throw an error on an empty vector.
