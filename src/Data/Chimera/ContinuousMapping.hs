@@ -270,7 +270,7 @@ toZCurve3 x y z = part1by2 z `shiftL` 2 .|. part1by2 y `shiftL` 1 .|. part1by2 x
 fromZCurve3 :: Word -> (ThirdWord, ThirdWord, ThirdWord)
 fromZCurve3 z = (compact1by2 z, compact1by2 (z `shiftR` 1), compact1by2 (z `shiftR` 2))
 
--- | Convert a function of two 'HalfWord's to a function of one 'Word'.
+-- | Convert a function of two 'ThirdWord's to a function of one 'Word'.
 contramapFromZCurve3
   :: (ThirdWord -> ThirdWord -> ThirdWord -> a)
   -> (Word -> a)
@@ -278,7 +278,7 @@ contramapFromZCurve3 f = uncurry3 f . fromZCurve3
   where
     uncurry3 func (a, b, c) = func a b c
 
--- | Convert a function of one 'Word' to a function of two 'HalfWord's.
+-- | Convert a function of one 'Word' to a function of two 'ThirdWord's.
 contramapToZCurve3
   :: (Word -> a)
   -> (ThirdWord -> ThirdWord -> ThirdWord -> a)
