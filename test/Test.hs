@@ -12,7 +12,9 @@ import Test.Tasty.QuickCheck as QC hiding ((.&.))
 import Data.Bits
 import Data.Foldable
 import Data.Function (fix)
+import qualified Data.List.Infinite as I
 import qualified Data.List as L
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Vector.Generic as G
 
 import Data.Chimera.ContinuousMapping
@@ -157,6 +159,13 @@ chimeraTests = testGroup "Chimera"
       let jx = ix `mod` 65536 in
         (if fromIntegral jx < length xs then xs !! fromIntegral jx else x) ===
           Ch.index (Ch.fromListWithDef x xs :: UChimera Bool) jx
+
+  , QC.testProperty "fromInfinite" $
+    \x xs ix ->
+      let jx = ix `mod` 65536 in
+        let ys = I.cycle (x NE.:| xs) in
+          (ys I.!! jx) ===
+            Ch.index (Ch.fromInfinite ys :: UChimera Bool) jx
 
   , QC.testProperty "fromVectorWithDef" $
     \x xs ix ->

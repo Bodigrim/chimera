@@ -95,6 +95,7 @@ test-suite chimera-test
     build-depends:
         base >=4.5 && <5,
         chimera,
+        infinite-list,
         QuickCheck >=2.10 && <2.15,
         tasty <1.6,
         tasty-hunit <0.11,
