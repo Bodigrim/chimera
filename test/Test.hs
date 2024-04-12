@@ -154,11 +154,20 @@ chimeraTests = testGroup "Chimera"
   , QC.testProperty "toList" $
     \x xs -> xs === take (length xs) (Ch.toList (Ch.fromListWithDef x xs :: UChimera Bool))
 
-  , QC.testProperty "fromListWithDef" $
-    \x xs ix ->
-      let jx = ix `mod` 65536 in
-        (if fromIntegral jx < length xs then xs !! fromIntegral jx else x) ===
-          Ch.index (Ch.fromListWithDef x xs :: UChimera Bool) jx
+  , testGroup "fromListWithDef"
+    [ QC.testProperty "finite list" $
+      \x xs ix ->
+        let jx = ix `mod` 65536 in
+          (if fromIntegral jx < length xs then xs !! fromIntegral jx else x) ===
+            Ch.index (Ch.fromListWithDef x xs :: UChimera Bool) jx
+
+    , QC.testProperty "infinite list" $
+      \x xs ix ->
+        let jx = ix `mod` 65536 in
+          let xs' = QC.getInfiniteList xs in
+            (xs' !! fromIntegral jx) ===
+              Ch.index (Ch.fromListWithDef x xs' :: UChimera Bool) jx
+    ]
 
   , QC.testProperty "fromInfinite" $
     \x xs ix ->
