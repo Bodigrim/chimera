@@ -553,13 +553,21 @@ fromListWithDef a = Chimera . fromListN (bits + 1) . go0
       [] -> G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
       x : xs -> G.singleton x : go 0 xs
 
-    go k xs = case measureOff kk xs of
-      Left l ->
-        G.fromListN kk (xs ++ replicate l a)
-          : map (\n -> G.replicate (1 `shiftL` n) a) [k + 1 .. bits - 1]
-      Right (ys, zs) -> G.fromListN kk ys : go (k + 1) zs
+    go k xs =
+      if k == bits
+        then []
+        else v : go (k + 1) zs
       where
         kk = 1 `shiftL` k
+        (v, zs) =
+          case measureOff kk xs of
+            Left l ->
+              ( if l == kk
+                  then G.replicate kk a
+                  else G.fromListN kk (xs ++ replicate l a)
+              , []
+              )
+            Right (ys, zs') -> (G.fromListN kk ys, zs')
 
 -- | Create a stream of values from a given infinite list.
 --
