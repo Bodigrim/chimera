@@ -572,7 +572,10 @@ fromInfinite = Chimera . fromListN (bits + 1) . go0
   where
     go0 (x :< xs) = G.singleton x : go 0 xs
 
-    go k xs = G.fromListN kk ys : go (k + 1) zs
+    go k xs =
+      if k == bits
+        then []
+        else G.fromListN kk ys : go (k + 1) zs
       where
         kk = 1 `shiftL` k
         (ys, zs) = Inf.splitAt kk xs
