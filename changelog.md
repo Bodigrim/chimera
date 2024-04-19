@@ -1,3 +1,7 @@
+# 0.4.1.0
+
+* Fix divergence of `fromInfinite` and `fromListWithDef` on infinite inputs.
+
 # 0.4.0.0
 
 * Remove instances `Foldable` and `Traversable`, they are too dangerous to diverge.
