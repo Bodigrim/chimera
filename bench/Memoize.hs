@@ -5,6 +5,7 @@ module Memoize
   ( memoizeBenchmark
   ) where
 
+import Prelude hiding (Foldable(..))
 import Data.Bits
 import Data.Chimera
 import Data.Foldable
