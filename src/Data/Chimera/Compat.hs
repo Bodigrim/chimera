@@ -18,8 +18,13 @@ module Data.Chimera.Compat (
   remWord2#,
 ) where
 
-#ifdef aarch64_HOST_ARCH
-import GHC.Exts (Word(..), Word#, timesWord#)
+#if defined(aarch64_HOST_ARCH) && __GLASGOW_HASKELL__ < 912
+
+import GHC.Exts (Word(..), Word#)
+
+#if __GLASGOW_HASKELL__ < 904
+
+import GHC.Exts (timesWord#)
 
 timesWord2# :: Word# -> Word# -> (# Word#, Word# #)
 timesWord2# x y = (# z, timesWord# x y #)
@@ -28,6 +33,12 @@ timesWord2# x y = (# z, timesWord# x y #)
 {-# INLINE timesWord2# #-}
 
 foreign import capi unsafe "aarch64.h umulh" c_umulh :: Word -> Word -> Word
+
+#else
+
+import GHC.Exts (timesWord2#)
+
+#endif
 
 remWord2# :: Word# -> Word# -> Word# -> Word#
 remWord2# lo hi m = r

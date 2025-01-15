@@ -77,7 +77,7 @@ library
         transformers <0.7,
         vector <0.14,
 
-    if arch(aarch64)
+    if (arch(aarch64) && impl(ghc <9.12))
         c-sources:    cbits/aarch64.c
         include-dirs: cbits
 
