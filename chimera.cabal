@@ -97,7 +97,7 @@ test-suite chimera-test
         base >=4.5 && <5,
         chimera,
         infinite-list,
-        QuickCheck >=2.10 && <2.17,
+        QuickCheck >=2.10 && <2.18,
         tasty <1.6,
         tasty-hunit <0.11,
         tasty-quickcheck <0.12,
