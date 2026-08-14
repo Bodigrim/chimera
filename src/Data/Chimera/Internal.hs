@@ -121,9 +121,9 @@ type UChimera = Chimera U.Vector
 -- @since 0.2.0.0
 instance Applicative (Chimera V.Vector) where
   pure a =
-    Chimera $
-      A.arrayFromListN (bits + 1) $
-        G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
+    Chimera
+      $ A.arrayFromListN (bits + 1)
+      $ G.singleton a : map (\k -> G.replicate (1 `shiftL` k) a) [0 .. bits - 1]
   (<*>) = zipWithSubvectors (<*>)
   liftA2 f = zipWithSubvectors (liftA2 f)
 
@@ -624,10 +624,10 @@ prependVector
   -> Chimera v a
 prependVector (G.uncons -> Nothing) ch = ch
 prependVector (G.uncons -> Just (pref0, pref)) (Chimera as) =
-  Chimera $
-    fromListN (bits + 1) $
-      fmap sliceAndConcat $
-        [LazySlice 0 1 $ G.singleton pref0] : go 0 1 0 inputs
+  Chimera
+    $ fromListN (bits + 1)
+    $ fmap sliceAndConcat
+    $ [LazySlice 0 1 $ G.singleton pref0] : go 0 1 0 inputs
   where
     inputs :: [(Word, v a)]
     inputs =

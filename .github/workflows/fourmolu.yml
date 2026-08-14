@@ -1,11 +1,13 @@
 name: fourmolu
-on: push
+on:
+  - push
+  - pull_request
 jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: haskell-actions/run-fourmolu@v11
+      - uses: actions/checkout@v5
+      - uses: haskell-actions/run-fourmolu@v13
         with:
           pattern: |
             src/**/*.hs
