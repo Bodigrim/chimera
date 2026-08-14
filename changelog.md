@@ -1,3 +1,7 @@
+# 0.4.2.0
+
+* Adjust implementation to reflect better implementation of ARM primops in GHC 9.12+.
+
 # 0.4.1.0
 
 * Fix divergence of `fromInfinite` and `fromListWithDef` on infinite inputs.
