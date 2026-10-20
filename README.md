@@ -205,7 +205,3 @@ because all asymptotic estimates of data structures
 are usually made under an assumption that they contain
 less than `maxBound :: Word` elements
 (otherwise you can not even treat pointers as a fixed-size data).
-
-## Additional resources
-
-* [Lazy streams with O(1) access](https://github.com/Bodigrim/my-talks/raw/master/londonhaskell2020/slides.pdf), London Haskell, 25.02.2020.
